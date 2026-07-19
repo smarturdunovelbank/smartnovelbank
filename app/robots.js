@@ -4,6 +4,6 @@ export default function robots() {
     rules: [
       { userAgent: "*", allow: "/", disallow: ["/search", "/request-status"] },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
+    sitemap: `${siteUrl}/sitemap-index.xml`,
   };
 }
