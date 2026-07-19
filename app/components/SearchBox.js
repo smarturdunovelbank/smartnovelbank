@@ -118,7 +118,7 @@ export default function SearchBox() {
     setShortError(false);
     if (q.length === 0) return;
     setShowSuggestions(false);
-    router.push(`/search?q=${encodeURIComponent(q)}`);
+    router.push(`/search?q=${encodeURIComponent(q)}`, { scroll: false });
   };
 
   const handleKeyDown = (e) => {
@@ -137,7 +137,7 @@ export default function SearchBox() {
         setValue(selected.Titles);
         setShowSuggestions(false);
         setShortError(false);
-        router.push(`/search?q=${encodeURIComponent(selected.Titles)}`);
+        router.push(`/search?q=${encodeURIComponent(selected.Titles)}`, { scroll: false });
       } else {
         submit();
       }
@@ -150,7 +150,7 @@ export default function SearchBox() {
     setValue(title);
     setShowSuggestions(false);
     setShortError(false);
-    router.push(`/search?q=${encodeURIComponent(title)}`);
+    router.push(`/search?q=${encodeURIComponent(title)}`, { scroll: false });
   };
 
   const startVoiceSearch = () => {
@@ -183,7 +183,7 @@ export default function SearchBox() {
       }
       setShortError(false);
       if (q.length > 0) {
-        router.push(`/search?q=${encodeURIComponent(q)}`);
+        router.push(`/search?q=${encodeURIComponent(q)}`, { scroll: false });
       }
     };
 

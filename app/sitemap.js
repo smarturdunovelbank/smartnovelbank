@@ -14,6 +14,14 @@ export async function generateSitemaps() {
 }
 
 export default async function sitemap({ id }) {
+  const staticPages = id === 0 ? [
+    { url: `${process.env.NEXT_PUBLIC_SITE_URL}/about`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${process.env.NEXT_PUBLIC_SITE_URL}/contact`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${process.env.NEXT_PUBLIC_SITE_URL}/request-novel`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${process.env.NEXT_PUBLIC_SITE_URL}/privacy`, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${process.env.NEXT_PUBLIC_SITE_URL}/terms`, changeFrequency: "monthly", priority: 0.3 },
+  ] : [];
+
   const from = id * CHUNK;
   const to = from + CHUNK - 1;
 
@@ -23,9 +31,11 @@ export default async function sitemap({ id }) {
     .order("id", { ascending: true })
     .range(from, to);
 
-  return (data || []).map((novel) => ({
+  const dynamicPages = (data || []).map((novel) => ({
     url: `${process.env.NEXT_PUBLIC_SITE_URL}${novelPath(novel)}`,
     changeFrequency: "monthly",
     priority: 0.7,
   }));
+
+  return [...staticPages, ...dynamicPages];
 }

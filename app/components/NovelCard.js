@@ -38,10 +38,10 @@ export default function NovelCard({ novel }) {
   return (
     <article className="novel-card">
       <h2 className="novel-title">
-        <Link href={novelPath(novel)}>{novel.Titles}</Link>
+        <Link href={novelPath(novel)} scroll={false}>{novel.Titles}</Link>
       </h2>
       <div className="card-actions">
-        <Link href={novelPath(novel)} className="btn-download">
+        <Link href={novelPath(novel)} scroll={false} className="btn-download">
           📖 Read / Download
         </Link>
         <button

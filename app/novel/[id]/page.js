@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import { novelPath, idFromParam } from "../../../lib/slug";
+import { getDriveEmbedUrl, getDriveDownloadUrl } from "../../../lib/driveEmbed";
 import NovelCard from "../../components/NovelCard";
+import Header from "../../components/Header";
 
 // ISR: page is generated on first visit/crawl, then cached and
 // re-checked once a day. This keeps build times sane for 100k+ rows
@@ -57,6 +59,8 @@ export default async function NovelPage({ params }) {
 
   const related = await getRelated(novel.Titles, novel.id);
   const safeLink = /^https?:\/\//i.test(novel.Links || "") ? novel.Links : "#";
+  const driveEmbedUrl = getDriveEmbedUrl(safeLink);
+  const downloadUrl = getDriveDownloadUrl(safeLink);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -69,39 +73,46 @@ export default async function NovelPage({ params }) {
 
   return (
     <>
-      <header className="app-header">
-        <div className="header-ornament">
-          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 10C19 7 12 7 7 9V36C12 34 19 34 24 37C29 34 36 34 41 36V9C36 7 29 7 24 10Z" stroke="#e9c878" strokeWidth="2" strokeLinejoin="round"/>
-            <path d="M24 10V37" stroke="#e9c878" strokeWidth="2"/>
-          </svg>
-        </div>
-        <h1>Smart Novel Bank</h1>
-        <div className="header-divider"></div>
-      </header>
+      <Header />
       <main className="app-main">
         <nav className="breadcrumb">
-          <Link href="/">Home</Link> / {novel.Titles}
+          <Link href="/" scroll={false}>Home</Link> / {novel.Titles}
         </nav>
+
+        <div style={{ textAlign: "center", marginBottom: "25px" }}>
+          <Link href="/" scroll={false} className="btn-go-back" style={{ height: "38px", padding: "0 18px", fontSize: "0.85rem", marginTop: "0" }}>
+            ⬅ Back to Library
+          </Link>
+        </div>
 
         <article className="detail-card">
           <h1>{novel.Titles}</h1>
-          <p style={{ fontFamily: "Segoe UI, sans-serif", color: "var(--sn-text-sub)" }}>
-            {novel.Titles} — is Urdu novel ko PDF format mein neeche diye gaye button se free download karein
-            ya online parhein.
+          <p className="text-urdu" style={{ color: "var(--sn-text-sub)", fontSize: "0.95rem", marginBottom: "25px" }}>
+            "{novel.Titles}" — اس اردو ناول کو پی ڈی ایف فارمیٹ میں نیچے دیے گئے بٹن سے مفت ڈاؤن لوڈ کریں یا آن لائن پڑھیں۔
           </p>
-          <a href={safeLink} target="_blank" rel="noopener noreferrer" className="btn-download">
+          <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className="btn-download">
             📥 Download PDF
           </a>
         </article>
 
-        <Link href="/" className="btn-go-back">
-          ⬅ Back to Library
-        </Link>
+        {driveEmbedUrl && (
+          <div style={{ maxWidth: "800px", margin: "40px auto 0" }}>
+            <h2 className="related-heading" style={{ textAlign: "center", marginBottom: "20px" }}>📖 Read Online — {novel.Titles}</h2>
+            <div style={{ position: 'relative', width: '100%', paddingTop: '141.4%', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--sn-paper-line)', boxShadow: 'var(--sn-shadow)' }}>
+              <iframe
+                src={driveEmbedUrl}
+                loading="lazy"
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                allow="autoplay"
+                title={`Read ${novel.Titles} online`}
+              />
+            </div>
+          </div>
+        )}
 
         {related.length > 0 && (
           <>
-            <h2 className="related-heading">Aap ko ye bhi pasand aa sakte hain</h2>
+            <h2 className="related-heading text-urdu">آپ کو یہ بھی پسند آ سکتے ہیں</h2>
             <div className="grid-container">
               {related.map((r) => (
                 <NovelCard key={r.id} novel={r} />

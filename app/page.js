@@ -5,6 +5,7 @@ import SearchBox from "./components/SearchBox";
 import NovelCard from "./components/NovelCard";
 import FavoritesView from "./components/FavoritesView";
 import Pagination from "./components/Pagination";
+import Header from "./components/Header";
 
 export const revalidate = 3600; // re-check homepage list every hour
 
@@ -31,19 +32,7 @@ export default async function HomePage({ searchParams }) {
 
   return (
     <>
-      <header className="app-header">
-        <div className="header-ornament">
-          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 10C19 7 12 7 7 9V36C12 34 19 34 24 37C29 34 36 34 41 36V9C36 7 29 7 24 10Z" stroke="#e9c878" strokeWidth="2" strokeLinejoin="round"/>
-            <path d="M24 10V37" stroke="#e9c878" strokeWidth="2"/>
-          </svg>
-        </div>
-        <h1>Smart Novel Bank</h1>
-        <p className="subtitle">
-          Search, discover, aur apne pasandeeda Urdu novels PDF format mein free download karein.
-        </p>
-        <div className="header-divider"></div>
-      </header>
+      <Header subtitle="اپنے پسندیدہ اردو ناولز تلاش کریں، آن لائن پڑھیں یا مفت پی ڈی ایف میں ڈاؤن لوڈ کریں۔" />
 
       <div className="search-container">
         <SearchBox />

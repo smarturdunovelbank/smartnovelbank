@@ -7,9 +7,11 @@ export default function NotFound() {
       <p style={{ fontFamily: "Segoe UI, sans-serif" }}>
         Ye page mojood nahi hai. Shayad link ghalat hai ya novel remove ho gaya hai.
       </p>
-      <Link href="/" className="btn-download" style={{ display: "inline-flex", marginTop: 16 }}>
-        ⬅ Home par jayein
-      </Link>
+      <div style={{ textAlign: "center", marginTop: "16px" }}>
+        <Link href="/" scroll={false} className="btn-download" style={{ display: "inline-flex" }}>
+          ⬅ Back to Library
+        </Link>
+      </div>
     </div>
   );
 }

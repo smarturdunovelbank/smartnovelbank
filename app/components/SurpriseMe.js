@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { novelPath } from "../../lib/slug";
+import { getDriveDownloadUrl } from "../../lib/driveEmbed";
 
 export default function SurpriseMe() {
   const [showModal, setShowModal] = useState(false);
@@ -47,18 +48,20 @@ export default function SurpriseMe() {
           <div className="surprise-modal">
             <button className="surprise-modal-close" onClick={() => setShowModal(false)}>✕</button>
             <span className="surprise-dice">🎲</span>
-            <span className="novel-label">Aaj ka novel</span>
+            <span className="novel-label text-urdu">آج کا  ناول</span>
             <div className="novel-name">
               {loading ? "Loading..." : randomNovel ? randomNovel.Titles : "Error fetching novel"}
             </div>
             
             {!loading && randomNovel && (
               <div className="surprise-actions">
-                <a href={randomNovel.Links || "#"} target="_blank" rel="noopener noreferrer" className="surprise-download">
-                  📥 Download PDF
+                <a href={getDriveDownloadUrl(randomNovel.Links || "#")} target="_blank" rel="noopener noreferrer" className="surprise-download text-urdu" style={{ flexDirection: 'row-reverse' }}>
+                  <span>📥</span>
+                  <span>ڈاؤن لوڈ کریں</span>
                 </a>
-                <button className="surprise-again attention" onClick={fetchRandomNovel}>
-                  🎲 Dobara
+                <button className="surprise-again attention text-urdu" onClick={fetchRandomNovel} style={{ flexDirection: 'row-reverse' }}>
+                  <span>🎲</span>
+                  <span>دوبارہ</span>
                 </button>
               </div>
             )}

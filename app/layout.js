@@ -1,5 +1,17 @@
+import { Suspense } from 'react';
+import localFont from 'next/font/local';
 import "./globals.css";
 import ThemeToggle from "./components/ThemeToggle";
+import Footer from "./components/Footer";
+
+import BackToTop from "./components/BackToTop";
+import ScrollToTop from "./components/ScrollToTop";
+
+const jameelNoori = localFont({
+  src: '../public/fonts/JameelNooriNastaleeq.ttf',
+  variable: '--font-nastaliq',
+  display: 'swap',
+});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.yourdomain.com";
 
@@ -25,7 +37,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ur" suppressHydrationWarning>
+    <html lang="ur" suppressHydrationWarning className={jameelNoori.variable}>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -45,6 +57,11 @@ export default function RootLayout({ children }) {
         <div id="novel-app-wrapper">
           <ThemeToggle />
           {children}
+          <Footer />
+          <BackToTop />
+          <Suspense fallback={null}>
+            <ScrollToTop />
+          </Suspense>
         </div>
       </body>
     </html>
