@@ -594,6 +594,17 @@ mark.highlight {
 .dark .btn-go-back { color: #121212; }
 .btn-go-back:hover { background: var(--sn-ink-dark); color: #fff; transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
 
+@media (max-width: 600px) {
+    .btn-go-back {
+        padding: 0 14px;
+        height: 40px;
+        font-size: 0.85rem;
+    }
+    .btn-go-back.text-urdu {
+        font-size: 0.9rem;
+    }
+}
+
 /* --- SKELETON --- */
 .skeleton {
     background-color: var(--sn-paper-line);
