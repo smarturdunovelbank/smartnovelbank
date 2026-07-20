@@ -6,7 +6,7 @@ export default function Header({
 }) {
   return (
     <header className="app-header">
-      <nav style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '30px', fontSize: '0.95rem', fontFamily: 'Segoe UI, sans-serif', flexWrap: 'wrap' }}>
+      <nav className="main-nav">
         <NavLinks />
       </nav>
       <div className="header-ornament">
