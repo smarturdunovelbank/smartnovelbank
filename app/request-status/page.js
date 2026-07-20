@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Header from "../components/Header";
+import PageTopActions from "../components/PageTopActions";
 import RequestStatusTable from "./RequestStatusTable";
 
 export const metadata = {
@@ -33,14 +34,10 @@ export default async function RequestStatusPage() {
     <>
       <Header />
       <main className="app-main">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
-          <Link href="/" scroll={false} className="btn-go-back">
-            ⬅ Back to Library
-          </Link>
-          <Link href="/request-novel" scroll={false} className="btn-go-back text-urdu">
-            📝 نئی درخواست بھیجیں
-          </Link>
-        </div>
+        <PageTopActions 
+          rightHref="/request-novel" 
+          rightText="📝 نئی درخواست بھیجیں" 
+        />
         
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <h1 className="text-urdu" style={{ textAlign: "center", marginBottom: "30px" }}>آپ کی درخواستوں کی صورتحال</h1>
