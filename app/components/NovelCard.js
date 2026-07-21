@@ -25,9 +25,11 @@ export default function NovelCard({ novel }) {
       if (exists) {
         favs = favs.filter((f) => f.id !== novel.id);
         setIsFavorite(false);
+        window.dispatchEvent(new CustomEvent("showToast", { detail: { message: "Removed from Favorites", icon: "🤍" } }));
       } else {
         favs.push({ id: novel.id, Titles: novel.Titles });
         setIsFavorite(true);
+        window.dispatchEvent(new CustomEvent("showToast", { detail: { message: "Added to Favorites", icon: "❤️" } }));
       }
       localStorage.setItem("favorites", JSON.stringify(favs));
       
@@ -53,8 +55,10 @@ export default function NovelCard({ novel }) {
       }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      window.dispatchEvent(new CustomEvent("showToast", { detail: { message: "Link Copied!", icon: "✅" } }));
     } catch (err) {
       console.error("Failed to copy", err);
+      window.dispatchEvent(new CustomEvent("showToast", { detail: { message: "Couldn't copy link", icon: "❌" } }));
     }
   };
 

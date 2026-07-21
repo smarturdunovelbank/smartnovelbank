@@ -38,6 +38,8 @@ export const metadata = {
   },
 };
 
+import ToastContainer from './components/ToastContainer';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="ur" suppressHydrationWarning className={jameelNoori.variable}>
@@ -61,6 +63,7 @@ export default function RootLayout({ children }) {
           <ThemeToggle />
           {children}
           <Footer />
+          <ToastContainer />
           <BackToTop />
           <Suspense fallback={null}>
             <ScrollToTop />
