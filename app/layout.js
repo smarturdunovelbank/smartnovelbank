@@ -23,6 +23,9 @@ export const metadata = {
   },
   description:
     "Search and download thousands of Urdu novels in PDF format for free. Browse by title, discover new writers, and read offline.",
+  icons: {
+    icon: '/favicon.ico',
+  },
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
