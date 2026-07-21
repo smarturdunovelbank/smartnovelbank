@@ -482,11 +482,12 @@ a { color: inherit; text-decoration: none; }
 
 .novel-title {
     font-family: 'Georgia', serif;
-    font-size: 1.12rem;
+    font-size: 1.3rem;
     font-weight: 700;
     color: var(--sn-text-main);
     margin-bottom: 18px;
     line-height: 1.4;
+    height: 3.64rem;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -881,7 +882,7 @@ mark.highlight {
     #searchBox { padding: 6px 0px; height: 40px; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
     .action-icon { width: 28px; height: 28px; font-size: 0.8rem; margin-left: 5px; }
     .search-submit { padding: 0 10px; font-size: 0.8rem; height: 28px; border-radius: 6px; width: auto; margin-left: 2px; }
-    .novel-title { font-size: 0.93rem; -webkit-line-clamp: 3; line-height: 1.3; margin-bottom: 10px; min-height: 2.5rem; }
+    .novel-title { font-size: 1.25rem; -webkit-line-clamp: 2; line-height: 1.4; margin-bottom: 10px; height: 3.5rem; min-height: unset; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; }
     .novel-card { padding: 14px; min-height: auto; }
     .suggestion-item { padding: 10px 15px; font-size: 0.88rem; gap: 8px; }
     .request-banner { flex-direction: column; align-items: flex-start; }

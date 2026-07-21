@@ -6,6 +6,7 @@ import { novelPath } from "../../lib/slug";
 
 export default function NovelCard({ novel }) {
   const [isFavorite, setIsFavorite] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     try {
@@ -35,15 +36,34 @@ export default function NovelCard({ novel }) {
     } catch (e) {}
   };
 
+  const copyLink = async () => {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const url = `${siteUrl}${novelPath(novel)}`;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy", err);
+    }
+  };
+
   return (
     <article className="novel-card">
-      <h2 className="novel-title">
+      <h2 className="novel-title" title={novel.Titles}>
         <Link href={novelPath(novel)} scroll={false}>{novel.Titles}</Link>
       </h2>
       <div className="card-actions">
-        <Link href={novelPath(novel)} scroll={false} className="btn-download">
-          📖 Read / Download
-        </Link>
         <button
           className={`btn btn-secondary btn-fav ${isFavorite ? "active" : ""}`}
           onClick={toggleFavorite}
@@ -52,6 +72,17 @@ export default function NovelCard({ novel }) {
         >
           {isFavorite ? "❤️" : "🤍"}
         </button>
+        <button
+          className="btn btn-secondary btn-copy"
+          onClick={copyLink}
+          aria-label="Copy novel link"
+          title="Copy novel link"
+        >
+          {copied ? "✅" : "🔗"}
+        </button>
+        <Link href={novelPath(novel)} scroll={false} className="btn-download">
+          📖 Read & Download
+        </Link>
       </div>
     </article>
   );
