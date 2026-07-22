@@ -110,22 +110,30 @@ export default function RequestStatusTable({ requests }) {
             title="Clear search"
             style={{
               position: "absolute",
-              left: "10px",
+              left: "8px",
               top: "50%",
               transform: "translateY(-50%)",
-              background: "none",
+              background: "var(--sn-paper-line)",
               border: "none",
               cursor: "pointer",
-              fontSize: "1.1rem",
-              color: "var(--sn-text-sub)",
+              fontSize: "1rem",
+              fontWeight: 700,
+              color: "var(--sn-ink)",
               lineHeight: 1,
-              padding: "4px",
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               zIndex: 1,
+              flexShrink: 0,
+              transition: "background 0.15s, color 0.15s",
             }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--sn-ink)"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--sn-paper-line)"; e.currentTarget.style.color = "var(--sn-ink)"; }}
           >
-            ×
+            ✕
           </button>
         )}
         <input
@@ -137,7 +145,7 @@ export default function RequestStatusTable({ requests }) {
           style={{
             width: "100%",
             padding: "12px 12px 12px",
-            paddingLeft: searchQuery ? "36px" : "12px",
+            paddingLeft: searchQuery ? "48px" : "12px",
             borderRadius: "8px",
             border: "1px solid var(--sn-paper-line)",
             fontSize: "1rem",
