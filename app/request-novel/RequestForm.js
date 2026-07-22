@@ -9,6 +9,8 @@ export default function RequestForm() {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState("idle"); // idle, loading, success, error
   const [showValidation, setShowValidation] = useState(false);
+  const [requestId, setRequestId] = useState(null);
+  const [idCopied, setIdCopied] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,13 +28,12 @@ export default function RequestForm() {
       
       if (!scriptUrl) {
         console.warn("Google Script URL is missing in environment variables.");
-        // We simulate success if not configured, or we could show error.
         setStatus("success");
         return;
       }
 
-      const params = new URLSearchParams({
-        sheet: "NovelRequests",
+      const body = JSON.stringify({
+        sheetName: "NovelRequests",
         novelName: novelName.trim().substring(0, 80),
         writerName: writerName.trim().substring(0, 60),
         message: message.trim().substring(0, 500),
@@ -40,13 +41,18 @@ export default function RequestForm() {
         device: deviceType,
       });
 
-      // use no-cors to prevent CORS issues with Google Apps Script redirects
-      await fetch(scriptUrl, { 
-        method: 'POST', 
-        body: params,
-        mode: 'no-cors' 
+      const res = await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
       });
 
+      // Google Apps Script returns 302 redirects which fetch follows —
+      // the final response should be JSON with { status, requestId }
+      const data = await res.json();
+      if (data.requestId) {
+        setRequestId(data.requestId);
+      }
       setStatus("success");
     } catch (err) {
       console.error(err);
@@ -54,10 +60,97 @@ export default function RequestForm() {
     }
   };
 
+  const copyId = async () => {
+    const textToCopy = String(requestId);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = textToCopy;
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setIdCopied(true);
+      setTimeout(() => setIdCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy ID", err);
+    }
+  };
+
   if (status === "success") {
     return (
       <div style={{ textAlign: "center", padding: "40px 20px", background: "var(--sn-paper-card)", borderRadius: "12px", border: "1px solid var(--sn-paper-line)" }}>
         <h3 className="text-urdu" style={{ color: "var(--sn-gold)", marginBottom: "24px" }}>شکریہ! آپ کی درخواست موصول ہو گئی ہے۔</h3>
+
+        {requestId && (
+          <div style={{
+            display: "inline-flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "10px",
+            background: "var(--sn-paper)",
+            border: "2px solid var(--sn-gold)",
+            borderRadius: "12px",
+            padding: "18px 28px",
+            marginBottom: "24px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{
+                fontFamily: "'Segoe UI', system-ui, sans-serif",
+                fontSize: "1.05rem",
+                color: "var(--sn-text-sub)",
+                fontWeight: 600,
+                letterSpacing: "0.5px",
+              }}>
+                Request ID:
+              </span>
+              <span style={{
+                fontFamily: "'Segoe UI', system-ui, sans-serif",
+                fontSize: "1.6rem",
+                fontWeight: "700",
+                color: "var(--sn-ink)",
+              }}>
+                #{requestId}
+              </span>
+              <button
+                onClick={copyId}
+                title="Copy Request ID"
+                aria-label="Copy Request ID"
+                style={{
+                  background: idCopied ? "var(--sn-gold-soft)" : "var(--sn-paper-card)",
+                  border: "1px solid var(--sn-paper-line)",
+                  borderRadius: "8px",
+                  width: "36px",
+                  height: "36px",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "0.2s",
+                  flexShrink: 0,
+                }}
+              >
+                {idCopied ? "✅" : "📋"}
+              </button>
+            </div>
+            <p className="text-urdu" style={{
+              margin: 0,
+              fontSize: "0.95rem",
+              color: "var(--sn-text-sub)",
+              maxWidth: "300px",
+              lineHeight: "1.6",
+            }}>
+              یہ آئی ڈی نوٹ کر لیں یا کاپی کریں — بعد میں اپنی درخواست کا اسٹیٹس دیکھنے کے لیے یہ ضروری ہوگی۔
+            </p>
+          </div>
+        )}
+
         <Link href="/request-status" scroll={false} className="btn-download text-urdu" style={{ display: "inline-block", textDecoration: "none" }}>
           📋 اپنی درخواست کا اسٹیٹس دیکھیں
         </Link>

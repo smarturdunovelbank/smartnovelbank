@@ -21,10 +21,20 @@ export default function RequestStatusTable({ requests }) {
   };
 
   const filteredRequests = requests.filter((req) => {
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.trim();
+    if (!query) return true;
+
+    // Numeric-only query → match against Request ID (exact match)
+    if (/^\d+$/.test(query)) {
+      const rowId = String(req["Request ID"] || "").trim();
+      return rowId === query;
+    }
+
+    // Text query → match Novel Name or Writer Name (case-insensitive substring)
+    const lq = query.toLowerCase();
     const novelName = (req["Novel Name"] || "").toLowerCase();
     const writerName = (req["Writer Name"] || "").toLowerCase();
-    return novelName.includes(query) || writerName.includes(query);
+    return novelName.includes(lq) || writerName.includes(lq);
   });
 
   const totalPages = Math.ceil(filteredRequests.length / PAGE_SIZE);
@@ -116,7 +126,7 @@ export default function RequestStatusTable({ requests }) {
       <div style={{ marginBottom: "20px", scrollMarginTop: "90px" }} ref={searchInputRef}>
         <input 
           type="text" 
-          placeholder="ناول یا رائٹر کا نام تلاش کریں..." 
+          placeholder="ناول، رائٹر کا نام یا Request ID تلاش کریں..." 
           value={searchQuery}
           onChange={handleSearchChange}
           className="text-urdu"
@@ -132,45 +142,104 @@ export default function RequestStatusTable({ requests }) {
         </div>
       ) : (
         <>
-          {/* DESKTOP & MOBILE TABLE VIEW */}
-          <div className="table-responsive" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-            <table className="status-table" style={{ minWidth: "800px" }}>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Novel Name</th>
-                  <th>Writer Name</th>
-                  <th>Status</th>
-                  <th>PDF</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentData.map((req, i) => (
-                  <tr key={i}>
-                    <td data-label="Date" style={{ whiteSpace: "nowrap" }}>{formatDate(req["Timestamp"])}</td>
-                    <td data-label="Novel Name" className="cell-novel-name" style={{ fontWeight: "bold" }} title={req["Novel Name"] || "Unknown Novel"}>
-                      {req["Novel Name"] || "Unknown Novel"}
-                    </td>
-                    <td data-label="Writer Name" className="cell-writer-name" style={{ color: "var(--sn-text-sub)" }} title={req["Writer Name"] || "—"}>
-                      {req["Writer Name"] || "—"}
-                    </td>
-                    <td data-label="Status" className="cell-status">{getStatusBadge(req["Status"])}</td>
-                    <td data-label="PDF" className="cell-pdf">
+          {/* DESKTOP TABLE — hidden on mobile via CSS */}
+          <div className="status-table-desktop">
+            <div className="table-responsive" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              <table className="status-table" style={{ minWidth: "860px" }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "60px" }}>ID</th>
+                    <th style={{ width: "130px" }}>Date</th>
+                    <th>Novel Name</th>
+                    <th>Writer Name</th>
+                    <th style={{ width: "140px" }}>Status</th>
+                    <th style={{ width: "110px" }}>PDF</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentData.map((req, i) => (
+                    <tr key={i}>
+                      <td data-label="ID" style={{ fontFamily: "'Segoe UI', sans-serif", fontWeight: 700, color: "var(--sn-text-sub)", fontSize: "0.9rem" }}>
+                        {req["Request ID"] ? `#${req["Request ID"]}` : "—"}
+                      </td>
+                      <td data-label="Date" style={{ whiteSpace: "nowrap" }}>{formatDate(req["Timestamp"])}</td>
+                      <td data-label="Novel Name" className="cell-novel-name" style={{ fontWeight: "bold" }} title={req["Novel Name"] || "Unknown Novel"}>
+                        {req["Novel Name"] || "Unknown Novel"}
+                      </td>
+                      <td data-label="Writer Name" className="cell-writer-name" style={{ color: "var(--sn-text-sub)" }} title={req["Writer Name"] || "—"}>
+                        {req["Writer Name"] || "—"}
+                      </td>
+                      <td data-label="Status" className="cell-status">{getStatusBadge(req["Status"])}</td>
+                      <td data-label="PDF" className="cell-pdf">
+                        {req["Status"] === "Completed" && req["PDF Link"] && /^https?:\/\//i.test(req["PDF Link"]) ? (
+                          <a href={req["PDF Link"]} target="_blank" rel="noopener noreferrer" className="btn-download btn-download-sm">
+                            📥 Download
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* MOBILE STACKED CARDS — hidden on desktop via CSS */}
+          <div className="status-cards-mobile">
+            {currentData.map((req, i) => (
+              <div key={i} className="status-card-mobile">
+                {/* Row 1: ID + Date (50/50 split) */}
+                <div className="status-card-row-split">
+                  <div className="status-card-cell">
+                    <span className="status-card-label">ID</span>
+                    <span className="status-card-value" style={{ fontWeight: 700 }}>
+                      {req["Request ID"] ? `#${req["Request ID"]}` : "—"}
+                    </span>
+                  </div>
+                  <div className="status-card-cell">
+                    <span className="status-card-label">Date</span>
+                    <span className="status-card-value">{formatDate(req["Timestamp"])}</span>
+                  </div>
+                </div>
+
+                {/* Row 2: Novel Name */}
+                <div className="status-card-row">
+                  <span className="status-card-label">Novel Name</span>
+                  <span className="status-card-value" style={{ fontWeight: "bold" }}>
+                    {req["Novel Name"] || "Unknown Novel"}
+                  </span>
+                </div>
+
+                {/* Row 3: Writer Name */}
+                <div className="status-card-row">
+                  <span className="status-card-label">Writer Name</span>
+                  <span className="status-card-value" style={{ color: "var(--sn-text-sub)" }}>
+                    {req["Writer Name"] || "—"}
+                  </span>
+                </div>
+
+                {/* Row 4: Status + PDF (50/50 split — mirrors existing pattern) */}
+                <div className="status-card-row-split">
+                  <div className="status-card-cell">
+                    <span className="status-card-label">Status</span>
+                    <span className="status-card-value">{getStatusBadge(req["Status"])}</span>
+                  </div>
+                  <div className="status-card-cell">
+                    <span className="status-card-label">PDF</span>
+                    <span className="status-card-value">
                       {req["Status"] === "Completed" && req["PDF Link"] && /^https?:\/\//i.test(req["PDF Link"]) ? (
                         <a href={req["PDF Link"]} target="_blank" rel="noopener noreferrer" className="btn-download btn-download-sm">
                           📥 Download
                         </a>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      ) : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-
-
 
           {renderPagination()}
         </>

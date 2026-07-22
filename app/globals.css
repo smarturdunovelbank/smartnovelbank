@@ -1123,88 +1123,66 @@ mark.highlight {
         margin-top: 4px;
     }
 
-    .status-table {
-        min-width: 0 !important;
-        background: transparent;
-        border: none;
-    }
-    .status-table thead {
-        display: none;
-    }
-    .status-table, .status-table tbody, .status-table td {
-        display: block;
-        width: 100%;
-    }
-    .status-table tr {
-        display: flex;
-        flex-wrap: wrap;
-        background: var(--sn-paper-card);
-        border: 1px solid var(--sn-paper-line);
-        border-left: 4px solid var(--sn-gold);
-        border-radius: 10px;
-        margin-bottom: 12px;
-        padding: 8px 12px;
-    }
-    .status-table td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 4px !important;
-        border: none !important;
-        border-bottom: 1px solid var(--sn-paper-line) !important;
-        text-align: right;
-    }
-    .status-table td:last-child {
-        border-bottom: none !important;
-    }
-    .status-table td::before {
-        content: attr(data-label);
-        font-weight: bold;
-        color: var(--sn-ink);
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 0.85rem;
-        text-align: left;
-        padding-right: 15px;
-        white-space: nowrap;
-        flex-shrink: 0;
-        min-width: 90px;
-    }
-    
-    .cell-novel-name, .cell-writer-name {
-        white-space: normal !important;
-        word-break: break-word;
-        max-width: none;
-        text-overflow: clip;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        text-align: left !important;
-    }
-    .cell-novel-name::before, .cell-writer-name::before {
-        margin-bottom: 4px;
-    }
-    
-    .cell-status, .cell-pdf {
-        width: 50% !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        text-align: left !important;
-        padding-top: 12px !important;
-        border-bottom: none !important;
-    }
-    .cell-status {
-        padding-right: 6px !important;
-    }
-    .cell-pdf {
-        padding-left: 6px !important;
-    }
-    .cell-status::before, .cell-pdf::before {
-        margin-bottom: 8px;
-    }
-    .cell-pdf .btn-download-sm {
-        width: 100%;
-        max-width: none;
-        text-align: center;
-        justify-content: center;
-        padding: 6px 4px !important;
-    }
+    .status-table-desktop { display: none; }
+    .status-cards-mobile { display: block; }
+}
+
+/* --- STATUS TABLE DESKTOP/MOBILE VISIBILITY --- */
+.status-table-desktop { display: block; }
+.status-cards-mobile { display: none; }
+
+/* --- STATUS MOBILE CARDS --- */
+.status-card-mobile {
+    background: var(--sn-paper-card);
+    border: 1px solid var(--sn-paper-line);
+    border-left: 4px solid var(--sn-gold);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+.status-card-row {
+    display: flex;
+    flex-direction: column;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--sn-paper-line);
+}
+.status-card-row:last-child { border-bottom: none; }
+
+.status-card-row-split {
+    display: flex;
+    gap: 0;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--sn-paper-line);
+}
+.status-card-row-split:last-child { border-bottom: none; }
+
+.status-card-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 8px;
+}
+.status-card-cell:last-child { padding-right: 0; padding-left: 8px; }
+
+.status-card-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--sn-ink);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.status-card-value {
+    font-size: 0.92rem;
+    color: var(--sn-text-main);
+    word-break: break-word;
+}
+
+/* PDF button inside mobile card */
+.status-cards-mobile .btn-download-sm {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 6px 4px !important;
 }
