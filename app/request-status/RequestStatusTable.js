@@ -102,14 +102,49 @@ export default function RequestStatusTable({ requests }) {
 
   return (
     <div className="status-tracker-container">
-      <div style={{ marginBottom: "20px", scrollMarginTop: "90px" }} ref={searchInputRef}>
+      <div style={{ marginBottom: "20px", scrollMarginTop: "90px", position: "relative" }} ref={searchInputRef}>
+        {searchQuery && (
+          <button
+            onClick={() => { setSearchQuery(""); setCurrentPage(1); }}
+            aria-label="Clear search"
+            title="Clear search"
+            style={{
+              position: "absolute",
+              left: "10px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "1.1rem",
+              color: "var(--sn-text-sub)",
+              lineHeight: 1,
+              padding: "4px",
+              display: "flex",
+              alignItems: "center",
+              zIndex: 1,
+            }}
+          >
+            ×
+          </button>
+        )}
         <input
           type="text"
           placeholder="ناول، رائٹر کا نام یا Request ID تلاش کریں..."
           value={searchQuery}
           onChange={handleSearchChange}
           className="text-urdu"
-          style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid var(--sn-paper-line)", fontSize: "1rem", fontFamily: "inherit" }}
+          style={{
+            width: "100%",
+            padding: "12px 12px 12px",
+            paddingLeft: searchQuery ? "36px" : "12px",
+            borderRadius: "8px",
+            border: "1px solid var(--sn-paper-line)",
+            fontSize: "1rem",
+            fontFamily: "inherit",
+            boxSizing: "border-box",
+            transition: "padding-left 0.15s",
+          }}
         />
       </div>
 
