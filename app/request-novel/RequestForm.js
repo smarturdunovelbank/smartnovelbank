@@ -32,19 +32,20 @@ export default function RequestForm() {
         return;
       }
 
-      const body = JSON.stringify({
-        sheetName: "NovelRequests",
-        novelName: novelName.trim().substring(0, 80),
-        writerName: writerName.trim().substring(0, 60),
-        message: message.trim().substring(0, 500),
-        timestamp: new Date().toISOString(),
-        device: deviceType,
-      });
+      const body = new URLSearchParams();
+      body.append("sheet", "NovelRequests");
+      body.append("novelName", novelName.trim().substring(0, 80));
+      body.append("writerName", writerName.trim().substring(0, 60));
+      body.append("message", message.trim().substring(0, 500));
+      body.append("timestamp", new Date().toISOString());
+      body.append("device", deviceType);
 
       const res = await fetch(scriptUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
         body,
+        // No headers — browser sets application/x-www-form-urlencoded
+        // automatically for URLSearchParams, making this a CORS simple
+        // request (no preflight OPTIONS sent).
       });
 
       // Google Apps Script returns 302 redirects which fetch follows —
