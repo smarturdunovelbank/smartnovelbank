@@ -12,15 +12,18 @@ export default function RequestForm() {
   const [requestId, setRequestId] = useState(null);
   const [idCopied, setIdCopied] = useState(false);
 
-  // Scroll to top when submission succeeds so the success message,
-  // Request ID card, and both top buttons are visible without manual scrolling.
-  // Fires exactly once when status first becomes "success".
-  // Does NOT conflict with ScrollToTop.js — this is a client-side state
-  // change with no URL/route change, so that component won't fire here.
+  // Scroll to the page heading when submission succeeds, so the heading,
+  // success message, and Request ID card are all visible — without
+  // overshooting above the heading to the very top of the page.
+  // Fires exactly once when status transitions to "success".
+  // Does NOT conflict with ScrollToTop.js — no URL/route change here.
   useEffect(() => {
     if (status === "success") {
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+      document.getElementById("request-form-heading")?.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
     }
   }, [status]);
 

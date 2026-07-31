@@ -17,7 +17,7 @@ export default function RequestNovelPage() {
           rightText="📋 اپنی درخواستیں دیکھیں" 
         />
         <article className="article-page" style={{ paddingTop: 0 }}>
-          <h1 className="text-urdu" style={{ textAlign: "center" }}>ناول ریکوئسٹ فارم - سمارٹ ناول بینک</h1>
+          <h1 id="request-form-heading" className="text-urdu" style={{ textAlign: "center" }}>ناول ریکوئسٹ فارم - سمارٹ ناول بینک</h1>
           <div className="divider" style={{ margin: "15px auto 30px" }}></div>
           <RequestForm />
         </article>
