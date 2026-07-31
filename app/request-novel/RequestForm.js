@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "../../lib/supabaseClient";
+import { revalidateRequestStatus } from "../actions";
 
 export default function RequestForm() {
   const [novelName, setNovelName] = useState("");
@@ -39,45 +41,29 @@ export default function RequestForm() {
 
     try {
       const deviceType = /Mobi|Android|iPhone/i.test(navigator.userAgent) ? "Mobile" : "Desktop";
-      const scriptUrl = process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_URL;
+
+      const { data, error } = await supabase
+        .from("novel_requests")
+        .insert({
+          novel_name: novelName.trim().substring(0, 80),
+          writer_name: writerName.trim().substring(0, 60) || null,
+          message: message.trim().substring(0, 500) || null,
+          device: deviceType,
+        })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      if (data?.id) setRequestId(data.id);
       
-      if (!scriptUrl) {
-        console.warn("Google Script URL is missing in environment variables.");
-        setStatus("success");
-        return;
-      }
+      // Explicitly revalidate the /request-status page's cache
+      // on the server so soft navigations show the new row instantly
+      await revalidateRequestStatus();
 
-      const body = new URLSearchParams();
-      body.append("sheet", "NovelRequests");
-      body.append("novelName", novelName.trim().substring(0, 80));
-      body.append("writerName", writerName.trim().substring(0, 60));
-      body.append("message", message.trim().substring(0, 500));
-      body.append("timestamp", new Date().toISOString());
-      body.append("device", deviceType);
-
-      const res = await fetch(scriptUrl, {
-        method: "POST",
-        body,
-        // No headers — browser sets application/x-www-form-urlencoded
-        // automatically for URLSearchParams, making this a CORS simple
-        // request (no preflight OPTIONS sent).
-      });
-
-      // Apps Script follows a 302 redirect; the final response carries
-      // the JSON body. Parse it separately so a parse failure doesn't
-      // block the success screen — the row is already written regardless.
-      try {
-        const data = await res.json();
-        // Support both field names: deployed script may return requestId or id
-        const rid = data.requestId ?? data.id ?? null;
-        if (rid) setRequestId(rid);
-      } catch (_) {
-        // JSON parse failed (e.g. redirect response was HTML) — not fatal.
-        // The row was already appended in the sheet. Show success without ID.
-      }
       setStatus("success");
     } catch (err) {
-      console.error(err);
+      console.error("Supabase insert error:", err);
       setStatus("error");
     }
   };
