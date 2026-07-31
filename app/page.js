@@ -7,6 +7,8 @@ import FavoritesView from "./components/FavoritesView";
 import Pagination from "./components/Pagination";
 import Header from "./components/Header";
 
+import { unstable_cache } from "next/cache";
+
 export const revalidate = 60;
 
 const PAGE_SIZE = 24;
@@ -17,15 +19,22 @@ export const metadata = {
   },
 };
 
+// Cache the total count for 1 hour — it rarely changes and is the
+// most expensive per-request query (runs on every pagination click).
+const getCachedTotalCount = unstable_cache(
+  async () => {
+    const { count, error } = await supabase
+      .from("urdu_novels")
+      .select("id", { count: "exact", head: true });
+    if (error) console.error("Supabase count error:", error);
+    return count || 0;
+  },
+  ["novels-total-count"],
+  { revalidate: 3600 }
+);
+
 async function getNovels(page, seed) {
-  // First get the exact total count
-  const { count, error: countError } = await supabase
-    .from("urdu_novels")
-    .select("id", { count: "exact", head: true });
-    
-  if (countError) console.error("Supabase count error:", countError);
-  const total = count || 0;
-  
+  const total = await getCachedTotalCount();
   if (total === 0) return { novels: [], total: 0 };
 
   const baseOffset = seed % Math.max(1, total);
