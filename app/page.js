@@ -95,7 +95,7 @@ export default async function HomePage({ searchParams }) {
   const { novels, total } = await getNovels(page, seed);
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.smartnovelbank.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://smart.urdunovelbanks.com";
   const canonicalUrl = page > 1 ? `${siteUrl}/?page=${page}` : `${siteUrl}/`;
 
   return (

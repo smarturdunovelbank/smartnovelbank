@@ -13,11 +13,6 @@ export default function RequestForm() {
   const [requestId, setRequestId] = useState(null);
   const [idCopied, setIdCopied] = useState(false);
 
-  // Scroll to the page heading when submission succeeds, so the heading,
-  // success message, and Request ID card are all visible — without
-  // overshooting above the heading to the very top of the page.
-  // Fires exactly once when status transitions to "success".
-  // Does NOT conflict with ScrollToTop.js — no URL/route change here.
   useEffect(() => {
     if (status === "success") {
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
