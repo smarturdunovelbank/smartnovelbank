@@ -105,12 +105,22 @@ export default function RequestForm() {
 
   if (status === "success") {
     return (
-      <div style={{ textAlign: "center", padding: "40px 20px", background: "var(--sn-paper-card)", borderRadius: "12px", border: "1px solid var(--sn-paper-line)" }}>
-        <h3 className="text-urdu" style={{ color: "var(--sn-gold)", marginBottom: "24px" }}>شکریہ! آپ کی درخواست موصول ہو گئی ہے۔</h3>
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "24px",
+        padding: "40px 20px",
+        background: "var(--sn-paper-card)",
+        borderRadius: "12px",
+        border: "1px solid var(--sn-paper-line)",
+        textAlign: "center",
+      }}>
+        <h3 className="text-urdu" style={{ color: "var(--sn-gold)", margin: 0 }}>شکریہ! آپ کی درخواست موصول ہو گئی ہے۔</h3>
 
         {requestId && (
           <div style={{
-            display: "inline-flex",
+            display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: "10px",
@@ -118,8 +128,10 @@ export default function RequestForm() {
             border: "2px solid var(--sn-gold)",
             borderRadius: "12px",
             padding: "18px 28px",
-            marginBottom: "24px",
             boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+            width: "100%",
+            maxWidth: "420px",
+            boxSizing: "border-box",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <span style={{
