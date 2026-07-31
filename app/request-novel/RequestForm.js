@@ -63,11 +63,17 @@ export default function RequestForm() {
         // request (no preflight OPTIONS sent).
       });
 
-      // Google Apps Script returns 302 redirects which fetch follows —
-      // the final response should be JSON with { status, requestId }
-      const data = await res.json();
-      if (data.requestId) {
-        setRequestId(data.requestId);
+      // Apps Script follows a 302 redirect; the final response carries
+      // the JSON body. Parse it separately so a parse failure doesn't
+      // block the success screen — the row is already written regardless.
+      try {
+        const data = await res.json();
+        // Support both field names: deployed script may return requestId or id
+        const rid = data.requestId ?? data.id ?? null;
+        if (rid) setRequestId(rid);
+      } catch (_) {
+        // JSON parse failed (e.g. redirect response was HTML) — not fatal.
+        // The row was already appended in the sheet. Show success without ID.
       }
       setStatus("success");
     } catch (err) {
