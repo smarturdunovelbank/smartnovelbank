@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
-import { revalidateRequestStatus } from "../actions";
 
 export default function RequestForm() {
   const [novelName, setNovelName] = useState("");
@@ -57,10 +56,6 @@ export default function RequestForm() {
 
       if (data?.id) setRequestId(data.id);
       
-      // Explicitly revalidate the /request-status page's cache
-      // on the server so soft navigations show the new row instantly
-      await revalidateRequestStatus();
-
       setStatus("success");
     } catch (err) {
       console.error("Supabase insert error:", err);
