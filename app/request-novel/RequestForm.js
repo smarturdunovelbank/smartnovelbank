@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function RequestForm() {
@@ -11,6 +11,18 @@ export default function RequestForm() {
   const [showValidation, setShowValidation] = useState(false);
   const [requestId, setRequestId] = useState(null);
   const [idCopied, setIdCopied] = useState(false);
+
+  // Scroll to top when submission succeeds so the success message,
+  // Request ID card, and both top buttons are visible without manual scrolling.
+  // Fires exactly once when status first becomes "success".
+  // Does NOT conflict with ScrollToTop.js — this is a client-side state
+  // change with no URL/route change, so that component won't fire here.
+  useEffect(() => {
+    if (status === "success") {
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+    }
+  }, [status]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
