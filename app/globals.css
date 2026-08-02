@@ -549,6 +549,37 @@ mark.highlight {
     color: #fff;
 }
 
+/* Footer social media icon buttons */
+.social-icon-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--sn-paper-card);
+    border: 1px solid var(--sn-paper-line);
+    color: var(--sn-ink);
+    text-decoration: none;
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.social-icon-link:hover,
+.social-icon-link:focus-visible {
+    color: var(--brand-color, var(--sn-ink));
+    background: var(--sn-gold-soft);
+    border-color: var(--sn-gold);
+    transform: scale(1.08);
+}
+@media (prefers-reduced-motion: reduce) {
+    .social-icon-link {
+        transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+    .social-icon-link:hover,
+    .social-icon-link:focus-visible {
+        transform: none;
+    }
+}
+
 .btn-secondary { background: var(--sn-paper); color: var(--sn-text-sub); width: 46px; height: 46px; padding: 0; flex-shrink: 0; font-size: 1.15rem; border: 1px solid var(--sn-paper-line); display: flex; align-items: center; justify-content: center; border-radius: 9px; cursor: pointer; transition: 0.2s;}
 .btn-secondary:hover { background: var(--sn-gold-soft); color: var(--sn-ink); border-color: var(--sn-gold-soft); }
 .btn-fav.active { color: var(--sn-danger); background: var(--sn-alert-red-bg); border-color: var(--sn-alert-red-border); }
