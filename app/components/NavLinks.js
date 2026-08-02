@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import SocialLinks from "./SocialLinks";
 
 export default function NavLinks() {
   const pathname = usePathname();
@@ -80,6 +81,11 @@ export default function NavLinks() {
                 {link.label}
               </Link>
             ))}
+          </div>
+
+          {/* Social icons — anchored at drawer bottom via margin-top: auto */}
+          <div className="drawer-social-icons">
+            <SocialLinks size="small" />
           </div>
         </div>
       </div>

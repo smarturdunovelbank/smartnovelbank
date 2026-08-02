@@ -580,6 +580,21 @@ mark.highlight {
     }
 }
 
+/* Smaller social icons variant — used inside the mobile drawer */
+.social-icon-link--sm {
+    width: 34px;
+    height: 34px;
+}
+
+/* Container for social icons inside the mobile drawer — pushed to bottom */
+.drawer-social-icons {
+    margin-top: auto;
+    padding: 20px 16px 28px;
+    border-top: 1px solid var(--sn-paper-line);
+    display: flex;
+    justify-content: center;
+}
+
 .btn-secondary { background: var(--sn-paper); color: var(--sn-text-sub); width: 46px; height: 46px; padding: 0; flex-shrink: 0; font-size: 1.15rem; border: 1px solid var(--sn-paper-line); display: flex; align-items: center; justify-content: center; border-radius: 9px; cursor: pointer; transition: 0.2s;}
 .btn-secondary:hover { background: var(--sn-gold-soft); color: var(--sn-ink); border-color: var(--sn-gold-soft); }
 .btn-fav.active { color: var(--sn-danger); background: var(--sn-alert-red-bg); border-color: var(--sn-alert-red-border); }
