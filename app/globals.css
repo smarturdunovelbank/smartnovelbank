@@ -539,8 +539,8 @@ a.whatsapp-channel-btn {
     gap: 8px;
     background: #25D366;
     color: #fff;
-    padding: 0 14px;
-    height: 46px;
+    padding: 10px 14px;
+    min-height: 46px;
     border-radius: 9px;
     font-weight: 700;
     font-size: 1rem;
