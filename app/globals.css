@@ -531,19 +531,31 @@ mark.highlight {
 }
 
 /* WhatsApp channel button — maintenance mode card */
-.whatsapp-channel-btn {
+a.whatsapp-channel-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
     gap: 8px;
     background: #25D366;
     color: #fff;
-    padding: 12px 24px;
-    border-radius: 10px;
+    padding: 0 14px;
+    height: 46px;
+    border-radius: 9px;
     font-weight: 700;
     font-size: 1rem;
     text-decoration: none;
     box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);
     transition: background 0.2s ease, transform 0.2s ease;
+    box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+    .whatsapp-channel-btn {
+        font-size: 0.95rem;
+        padding: 0 12px;
+        gap: 8px;
+    }
 }
 .whatsapp-channel-btn:hover {
     background: #1ebe5b;
