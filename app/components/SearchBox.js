@@ -100,6 +100,7 @@ export default function SearchBox() {
 
   // Fetch suggestions
   useEffect(() => {
+    let ignore = false;
     const fetchSuggestions = async () => {
       const q = value.trim();
       const lowerQ = q.toLowerCase();
@@ -112,13 +113,16 @@ export default function SearchBox() {
         .select("id, Titles")
         .ilike("Titles", `%${q}%`)
         .limit(6);
-      if (data) {
+      if (!ignore && data) {
         setSuggestions(data);
       }
     };
     
     const debounceId = setTimeout(fetchSuggestions, 300);
-    return () => clearTimeout(debounceId);
+    return () => {
+      ignore = true;
+      clearTimeout(debounceId);
+    };
   }, [value]);
 
   // Click outside to close suggestions
@@ -319,10 +323,10 @@ export default function SearchBox() {
       )}
 
       {shortError && !restrictedError && (
-        <div className="request-banner alert-short" style={{ marginTop: 15 }}>
-          <div className="request-banner-text">
-             <h4>Sawal Bohat Chota Hai</h4>
-             <p>Achi search ke liye kam az kam 3 alfaz likhein (Jaise: Peer e Kamil).</p>
+        <div className="request-banner alert-short" style={{ marginTop: 15, flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <div className="request-banner-text" style={{ textAlign: "center", width: "100%" }}>
+             <h4 style={{ textAlign: "center" }}>Sawal Bohat Chota Hai</h4>
+             <p style={{ textAlign: "center" }}>Achi search ke liye kam az kam 3 alfaz likhein (Jaise: Peer e Kamil).</p>
           </div>
         </div>
       )}

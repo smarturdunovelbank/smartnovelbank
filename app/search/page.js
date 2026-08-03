@@ -117,10 +117,10 @@ export default async function SearchPage({ searchParams }) {
              <Link href="/" scroll={false} className="btn-go-back">⬅ Back to Library</Link>
           </div>
         ) : isShort ? (
-          <div className="request-banner alert-short">
-             <div className="request-banner-text">
-                <h4>Sawal Bohat Chota Hai</h4>
-                <p>Achi search ke liye kam az kam 3 alfaz likhein (Jaise: Peer e Kamil).</p>
+          <div className="request-banner alert-short" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+             <div className="request-banner-text" style={{ textAlign: "center", width: "100%" }}>
+                <h4 style={{ textAlign: "center" }}>Sawal Bohat Chota Hai</h4>
+                <p style={{ textAlign: "center" }}>Achi search ke liye kam az kam 3 alfaz likhein (Jaise: Peer e Kamil).</p>
              </div>
           </div>
         ) : results.length === 0 && q.trim() !== "" ? (
