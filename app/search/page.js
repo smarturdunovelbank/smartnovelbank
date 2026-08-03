@@ -48,6 +48,49 @@ export default async function SearchPage({ searchParams }) {
   const { data: results, total } = await searchNovels(q, page);
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  let relatedNovels = [];
+  if (results.length === 0 && q.trim() !== "") {
+    // Attempt 1: fuzzy match — try each significant word individually
+    let fuzzyData = [];
+    const words = q.trim().split(/\s+/).filter(w => w.length > 2);
+    for (const word of words) {
+      if (fuzzyData.length >= 6) break;
+      const { data: wordData } = await supabase
+        .from("urdu_novels")
+        .select("id, Titles")
+        .ilike("Titles", `%${word}%`)
+        .limit(6);
+      if (wordData && wordData.length > 0) {
+        // Merge, avoiding duplicate ids
+        for (const novel of wordData) {
+          if (fuzzyData.length >= 6) break;
+          if (!fuzzyData.some(n => n.id === novel.id)) {
+            fuzzyData.push(novel);
+          }
+        }
+      }
+    }
+
+    // Attempt 2: random fallback — guaranteed non-empty
+    if (fuzzyData.length === 0) {
+      const { count: totalCount } = await supabase
+        .from("urdu_novels")
+        .select("*", { count: "exact", head: true });
+      const safeMax = Math.max(0, (totalCount || 100) - 6);
+      const randomOffset = Math.floor(Math.random() * safeMax);
+      const { data: randomData } = await supabase
+        .from("urdu_novels")
+        .select("id, Titles")
+        .range(randomOffset, randomOffset + 5)
+        .limit(6);
+      if (randomData && randomData.length > 0) {
+        fuzzyData = randomData;
+      }
+    }
+
+    relatedNovels = fuzzyData;
+  }
+
   return (
     <>
       <Header title="Search Results" subtitle={`"${q}" کے لیے ${total} ناولز ملے۔`} />
@@ -81,15 +124,27 @@ export default async function SearchPage({ searchParams }) {
              </div>
           </div>
         ) : results.length === 0 && q.trim() !== "" ? (
-          <div className="request-banner">
-             <div className="request-banner-text">
-                <h4 className="text-urdu">ناول نہیں ملا؟ 😔</h4>
-                <p className="text-urdu">اسپیلنگ چیک کریں یا نیچے دیے گئے بٹن پر کلک کر کے ناول کی درخواست بھیجیں، ہم اسے جلد سسٹم میں شامل کر دیں گے۔</p>
-             </div>
-             <div style={{ textAlign: "center", width: "100%", marginTop: "10px" }}>
-                <Link href="/request-novel" scroll={false} className="btn-go-back text-urdu">📬 ناول ریکوئسٹ کریں</Link>
-             </div>
-          </div>
+          <>
+            <div className="request-banner" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+                <div className="request-banner-text">
+                  <h4 className="text-urdu" style={{ textAlign: "center", fontStyle: "normal" }}>ناول نہیں ملا؟ 😔</h4>
+                  <p className="text-urdu">اسپیلنگ چیک کریں یا نیچے دیے گئے بٹن پر کلک کر کے ناول کی درخواست بھیجیں، ہم اسے جلد سسٹم میں شامل کر دیں گے۔</p>
+               </div>
+               <div style={{ textAlign: "center", width: "100%", marginTop: "10px" }}>
+                  <Link href="/request-novel" scroll={false} className="btn-go-back text-urdu">📬 ناول ریکوئسٹ کریں</Link>
+               </div>
+            </div>
+            {relatedNovels.length > 0 && (
+              <div style={{ marginTop: "40px" }}>
+                <h2 className="related-heading text-urdu">آپ کو یہ بھی پسند آ سکتے ہیں</h2>
+                <div className="grid-container" style={{ marginTop: "20px" }}>
+                  {relatedNovels.map((novel) => (
+                    <NovelCard key={novel.id} novel={novel} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <>
             <div className="grid-container">
