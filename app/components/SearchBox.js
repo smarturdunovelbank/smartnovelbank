@@ -3,6 +3,12 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { getUserId } from "../../lib/getUserId";
+
+const RESTRICTED_KEYWORDS = [
+  "bold", "sexy", "sex", "18+", "adult", "dirty",
+  "kiss", "ganda", "gandi", "galat","suhagrat","tharki","porn","nude","husna kanwal","husnay kanwal"
+];
 
 const TYPING_TEXTS = [
   "Konsa novel parhna hai aaj?...",
@@ -21,7 +27,24 @@ export default function SearchBox() {
   const [isListening, setIsListening] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [shortError, setShortError] = useState(false);
+  const [restrictedError, setRestrictedError] = useState(false);
   const wrapperRef = useRef(null);
+  const lastLoggedQueryRef = useRef("");
+
+  const logBlockedSearch = (q, suffix) => {
+    if (q === lastLoggedQueryRef.current) return;
+    lastLoggedQueryRef.current = q;
+    const userId = getUserId();
+    const device = /Mobi|Android|iPhone/i.test(navigator.userAgent) ? "Mobile" : "Desktop";
+    const params = new URLSearchParams({
+      search: q + suffix,
+      timestamp: new Date().toISOString(),
+      noResults: "true",
+      device,
+      userId,
+    });
+    fetch(process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_URL, { method: 'POST', body: params }).catch(() => {});
+  };
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -79,7 +102,8 @@ export default function SearchBox() {
   useEffect(() => {
     const fetchSuggestions = async () => {
       const q = value.trim();
-      if (q.length < 3) {
+      const lowerQ = q.toLowerCase();
+      if (q.length < 3 || RESTRICTED_KEYWORDS.some(k => lowerQ.includes(k))) {
         setSuggestions([]);
         return;
       }
@@ -111,11 +135,27 @@ export default function SearchBox() {
   const submit = (e) => {
     if (e) e.preventDefault();
     const q = value.trim();
+    if (q.length === 0) return;
+
+    const lowerQ = q.toLowerCase();
+    if (RESTRICTED_KEYWORDS.some(k => lowerQ.includes(k))) {
+      logBlockedSearch(q, " (Restricted)");
+      setRestrictedError(true);
+      setShortError(false);
+      return;
+    } else if (/[\u0600-\u06FF]/.test(q)) {
+      logBlockedSearch(q, " (Urdu Input)");
+    } else if (q.length > 0 && q.length < 3 && q !== "all") {
+      logBlockedSearch(q, " (Too Short)");
+    }
+
     if (q.length > 0 && q.length < 3 && q !== "all") {
       setShortError(true);
+      setRestrictedError(false);
       return;
     }
     setShortError(false);
+    setRestrictedError(false);
     if (q.length === 0) return;
     setShowSuggestions(false);
     router.push(`/search?q=${encodeURIComponent(q)}`, { scroll: false });
@@ -137,6 +177,7 @@ export default function SearchBox() {
         setValue(selected.Titles);
         setShowSuggestions(false);
         setShortError(false);
+        setRestrictedError(false);
         router.push(`/search?q=${encodeURIComponent(selected.Titles)}`, { scroll: false });
       } else {
         submit();
@@ -150,6 +191,7 @@ export default function SearchBox() {
     setValue(title);
     setShowSuggestions(false);
     setShortError(false);
+    setRestrictedError(false);
     router.push(`/search?q=${encodeURIComponent(title)}`, { scroll: false });
   };
 
@@ -167,6 +209,7 @@ export default function SearchBox() {
     recognition.onstart = () => {
       setValue("");
       setShortError(false);
+      setRestrictedError(false);
       setIsListening(true);
     };
 
@@ -177,11 +220,27 @@ export default function SearchBox() {
       setShowSuggestions(false);
       
       const q = transcript.trim();
+      if (q.length === 0) return;
+
+      const lowerQ = q.toLowerCase();
+      if (RESTRICTED_KEYWORDS.some(k => lowerQ.includes(k))) {
+        logBlockedSearch(q, " (Restricted)");
+        setRestrictedError(true);
+        setShortError(false);
+        return;
+      } else if (/[\u0600-\u06FF]/.test(q)) {
+        logBlockedSearch(q, " (Urdu Input)");
+      } else if (q.length > 0 && q.length < 3 && q !== "all") {
+        logBlockedSearch(q, " (Too Short)");
+      }
+
       if (q.length > 0 && q.length < 3 && q !== "all") {
         setShortError(true);
+        setRestrictedError(false);
         return;
       }
       setShortError(false);
+      setRestrictedError(false);
       if (q.length > 0) {
         router.push(`/search?q=${encodeURIComponent(q)}`, { scroll: false });
       }
@@ -215,6 +274,7 @@ export default function SearchBox() {
             setShowSuggestions(true);
             setSelectedIndex(-1);
             setShortError(false);
+            setRestrictedError(false);
           }}
           onFocus={() => { if(value.trim().length >= 3) setShowSuggestions(true); }}
           onKeyDown={handleKeyDown}
@@ -226,7 +286,7 @@ export default function SearchBox() {
           type="button" 
           id="clearBtn" 
           className={`action-icon ${value && !isListening ? 'show-btn' : ''}`} 
-          onClick={() => { setValue(""); setSuggestions([]); setShortError(false); document.getElementById("searchBox").focus(); }}
+          onClick={() => { setValue(""); setSuggestions([]); setShortError(false); setRestrictedError(false); document.getElementById("searchBox").focus(); }}
           aria-label="Clear Search"
         >✕</button>
         <button
@@ -258,11 +318,20 @@ export default function SearchBox() {
         </div>
       )}
 
-      {shortError && (
+      {shortError && !restrictedError && (
         <div className="request-banner alert-short" style={{ marginTop: 15 }}>
           <div className="request-banner-text">
              <h4>Sawal Bohat Chota Hai</h4>
              <p>Achi search ke liye kam az kam 3 alfaz likhein (Jaise: Peer e Kamil).</p>
+          </div>
+        </div>
+      )}
+
+      {restrictedError && (
+        <div className="request-banner alert-restricted" style={{ marginTop: 15 }}>
+          <div className="request-banner-text">
+            <h4 className="text-urdu">⚠️ یہ الفاظ منع ہیں</h4>
+            <p className="text-urdu">آپ نے جو لفظ سرچ کیا ہے وہ ہماری کمیونٹی گائیڈ لائنز کے خلاف ہے۔</p>
           </div>
         </div>
       )}

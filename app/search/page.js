@@ -4,6 +4,7 @@ import SearchBox from "../components/SearchBox";
 import NovelCard from "../components/NovelCard";
 import Pagination from "../components/Pagination";
 import Header from "../components/Header";
+import SearchLogger from "./SearchLogger";
 
 export const metadata = {
   robots: { index: false, follow: true },
@@ -42,6 +43,7 @@ export default async function SearchPage({ searchParams }) {
   const lowerQ = q.toLowerCase();
   const isShort = q.trim().length > 0 && q.trim().length < 3;
   const isRestricted = RESTRICTED_KEYWORDS.some(k => lowerQ.includes(k));
+  const hasUrdu = /[\u0600-\u06FF]/.test(q);
   
   const { data: results, total } = await searchNovels(q, page);
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -55,7 +57,10 @@ export default async function SearchPage({ searchParams }) {
       </div>
 
       <main className="app-main">
-        <div style={{ marginBottom: "24px", textAlign: "center" }}>
+        {!isRestricted && !isShort && !hasUrdu && page === 1 && q.trim() !== "" && (
+          <SearchLogger query={q} resultCount={results.length} />
+        )}
+        <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
           <Link href="/" scroll={false} className="btn-go-back">
             ⬅ Back to Library
           </Link>
@@ -71,15 +76,15 @@ export default async function SearchPage({ searchParams }) {
         ) : isShort ? (
           <div className="request-banner alert-short">
              <div className="request-banner-text">
-                <h4 className="text-urdu">سوال بہت چھوٹا ہے</h4>
-                <p className="text-urdu">اچھی سرچ کے لیے کم از کم 3 الفاظ لکھیں (جیسے: پیرِ کامل)۔</p>
+                <h4>Sawal Bohat Chota Hai</h4>
+                <p>Achi search ke liye kam az kam 3 alfaz likhein (Jaise: Peer e Kamil).</p>
              </div>
           </div>
         ) : results.length === 0 && q.trim() !== "" ? (
           <div className="request-banner">
              <div className="request-banner-text">
                 <h4 className="text-urdu">ناول نہیں ملا؟ 😔</h4>
-                <p className="text-urdu">اسپیلنگ چیک کریں یا صرف ایک لفظ لکھ کر دیکھیں (جیسے: "Jannat" بجائے "Jannat k Pattay")۔</p>
+                <p className="text-urdu">اسپیلنگ چیک کریں یا نیچے دیے گئے بٹن پر کلک کر کے ناول کی درخواست بھیجیں، ہم اسے جلد سسٹم میں شامل کر دیں گے۔</p>
              </div>
              <div style={{ textAlign: "center", width: "100%", marginTop: "10px" }}>
                 <Link href="/request-novel" scroll={false} className="btn-go-back text-urdu">📬 ناول ریکوئسٹ کریں</Link>
