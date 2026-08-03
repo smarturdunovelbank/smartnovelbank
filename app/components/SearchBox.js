@@ -328,10 +328,10 @@ export default function SearchBox() {
       )}
 
       {restrictedError && (
-        <div className="request-banner alert-restricted" style={{ marginTop: 15 }}>
-          <div className="request-banner-text">
-            <h4 className="text-urdu">⚠️ یہ الفاظ منع ہیں</h4>
-            <p className="text-urdu">آپ نے جو لفظ سرچ کیا ہے وہ ہماری کمیونٹی گائیڈ لائنز کے خلاف ہے۔</p>
+        <div className="request-banner alert-restricted" style={{ marginTop: 15, flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <div className="request-banner-text" style={{ textAlign: "center", width: "100%" }}>
+            <h4 className="text-urdu" style={{ textAlign: "center", fontStyle: "normal" }}>یہ الفاظ منع ہیں 🛡️</h4>
+            <p className="text-urdu" style={{ textAlign: "center" }}>آپ نے جو لفظ سرچ کیا ہے وہ ہماری کمیونٹی گائیڈ لائنز کے خلاف ہے۔ براہِ کرم صرف معیاری اردو ناول تلاش کریں</p>
           </div>
         </div>
       )}
