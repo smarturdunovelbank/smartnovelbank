@@ -36,13 +36,16 @@ export const metadata = {
     index: true,
     follow: true,
   },
+  other: {
+    google: "notranslate",
+  },
 };
 
 import ToastContainer from './components/ToastContainer';
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ur" suppressHydrationWarning className={jameelNoori.variable}>
+    <html lang="ur" translate="no" suppressHydrationWarning className={jameelNoori.variable}>
       <head>
         <script
           dangerouslySetInnerHTML={{
