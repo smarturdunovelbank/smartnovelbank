@@ -1120,9 +1120,6 @@ a.whatsapp-channel-btn {
 .status-table tbody tr:nth-child(even) {
     background: var(--sn-paper-card);
 }
-.status-table tbody tr:hover {
-    background: var(--sn-gold-soft);
-}
 
 .badge-completed {
     background: var(--sn-success); 

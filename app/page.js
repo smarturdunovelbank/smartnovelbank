@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 import { novelPath } from "../lib/slug";
@@ -90,7 +91,28 @@ async function getNovels(page, seed) {
 export default async function HomePage({ searchParams }) {
   const page = Math.max(1, parseInt(searchParams?.page || "1", 10) || 1);
   const seedParam = searchParams?.seed;
-  const seed = seedParam ? parseInt(seedParam, 10) : Math.floor(Math.random() * 1000000);
+
+  let seed;
+  if (seedParam) {
+    // Explicit seed in URL — always honour it (pagination links use this)
+    seed = parseInt(seedParam, 10);
+  } else {
+    // Detect known search-engine crawlers via User-Agent header.
+    // They get a day-based deterministic seed so repeated crawls within
+    // the same day share the same DB offset and can benefit from caching.
+    const headersList = headers();
+    const ua = (headersList.get("user-agent") || "").toLowerCase();
+    const SEARCH_BOT_PATTERN =
+      /googlebot|bingbot|slurp|duckduckbot|yandexbot|baiduspider|facebookexternalhit|twitterbot|linkedinbot/i;
+
+    if (SEARCH_BOT_PATTERN.test(ua)) {
+      // Seed = day-number since epoch (changes once per day, same for all crawlers)
+      seed = Math.floor(Date.now() / 86_400_000);
+    } else {
+      // Real human visitor — keep the existing random-per-visit behaviour
+      seed = Math.floor(Math.random() * 1_000_000);
+    }
+  }
   
   const { novels, total } = await getNovels(page, seed);
   const totalPages = Math.ceil(total / PAGE_SIZE);

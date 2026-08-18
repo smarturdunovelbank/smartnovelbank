@@ -75,7 +75,7 @@ export default async function SearchPage({ searchParams }) {
     if (fuzzyData.length === 0) {
       const { count: totalCount } = await supabase
         .from("urdu_novels")
-        .select("*", { count: "exact", head: true });
+        .select("id", { count: "exact", head: true });
       const safeMax = Math.max(0, (totalCount || 100) - 6);
       const randomOffset = Math.floor(Math.random() * safeMax);
       const { data: randomData } = await supabase

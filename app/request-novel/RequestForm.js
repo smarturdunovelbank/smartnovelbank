@@ -261,7 +261,7 @@ export default function RequestForm() {
             padding: "10px 20px"
           }}
         >
-          {status === "loading" ? "بھیجا جا رہا ہے..." : "درخواست بھیجیں"}
+          {status === "loading" ? "بھیجی جا رہی ہے...": "درخواست بھیجیں"}
         </button>
       </div>
     </form>

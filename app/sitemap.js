@@ -1,6 +1,11 @@
 import { supabase } from "../lib/supabaseClient";
 import { novelPath } from "../lib/slug";
 
+// Revalidate sitemap chunks at most once per day.
+// Without this every crawler hit that reaches this dynamic route would
+// trigger a fresh 50k-row Supabase query — very expensive at scale.
+export const revalidate = 86400;
+
 const CHUNK = 50000; // Google's per-sitemap URL limit
 
 export async function generateSitemaps() {
