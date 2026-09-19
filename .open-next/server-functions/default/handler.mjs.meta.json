@@ -2308,7 +2308,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.js": {
-      "bytes": 69193,
+      "bytes": 69274,
       "imports": [
         {
           "path": "fs",
@@ -2455,18 +2455,13 @@
       ],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/chunks/517.js": {
-      "bytes": 10255,
-      "imports": [],
-      "format": "cjs"
-    },
     ".open-next/server-functions/default/.next/server/chunks/518.js": {
       "bytes": 37983,
       "imports": [],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/chunks/527.js": {
-      "bytes": 150042,
+    ".open-next/server-functions/default/.next/server/chunks/582.js": {
+      "bytes": 10255,
       "imports": [],
       "format": "cjs"
     },
@@ -2497,6 +2492,11 @@
       "imports": [],
       "format": "cjs"
     },
+    ".open-next/server-functions/default/.next/server/chunks/777.js": {
+      "bytes": 150042,
+      "imports": [],
+      "format": "cjs"
+    },
     ".open-next/server-functions/default/.next/server/chunks/945.js": {
       "bytes": 6439,
       "imports": [],
@@ -2516,19 +2516,14 @@
           "original": "./chunks/269.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/517.js",
-          "kind": "require-call",
-          "original": "./chunks/517.js"
-        },
-        {
           "path": ".open-next/server-functions/default/.next/server/chunks/518.js",
           "kind": "require-call",
           "original": "./chunks/518.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/527.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/582.js",
           "kind": "require-call",
-          "original": "./chunks/527.js"
+          "original": "./chunks/582.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/682.js",
@@ -2544,6 +2539,11 @@
           "path": ".open-next/server-functions/default/.next/server/chunks/738.js",
           "kind": "require-call",
           "original": "./chunks/738.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/chunks/777.js",
+          "kind": "require-call",
+          "original": "./chunks/777.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/945.js",
@@ -2892,8 +2892,8 @@
       ],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/app/contact/page.js": {
-      "bytes": 7792,
+    ".open-next/server-functions/default/.next/server/app/privacy/page.js": {
+      "bytes": 8447,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/client/components/action-async-storage.external.js",
@@ -2948,8 +2948,8 @@
       ],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/app/privacy/page.js": {
-      "bytes": 8447,
+    ".open-next/server-functions/default/.next/server/app/contact/page.js": {
+      "bytes": 7792,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/client/components/action-async-storage.external.js",
@@ -3582,14 +3582,14 @@
           "original": "E:\\git-workstation\\smart-novel-bank\\.open-next\\server-functions\\default\\.next\\server\\app\\novel\\[id]\\page.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/app/contact/page.js",
-          "kind": "require-call",
-          "original": "E:\\git-workstation\\smart-novel-bank\\.open-next\\server-functions\\default\\.next\\server\\app\\contact\\page.js"
-        },
-        {
           "path": ".open-next/server-functions/default/.next/server/app/privacy/page.js",
           "kind": "require-call",
           "original": "E:\\git-workstation\\smart-novel-bank\\.open-next\\server-functions\\default\\.next\\server\\app\\privacy\\page.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/app/contact/page.js",
+          "kind": "require-call",
+          "original": "E:\\git-workstation\\smart-novel-bank\\.open-next\\server-functions\\default\\.next\\server\\app\\contact\\page.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/pages/_document.js",
@@ -5445,7 +5445,7 @@
           "bytesInOutput": 9708
         },
         ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.js": {
-          "bytesInOutput": 62244
+          "bytesInOutput": 62325
         },
         ".open-next/server-functions/default/node_modules/next/dist/client/components/request-async-storage-instance.js": {
           "bytesInOutput": 759
@@ -5468,14 +5468,11 @@
         ".open-next/server-functions/default/.next/server/chunks/269.js": {
           "bytesInOutput": 224192
         },
-        ".open-next/server-functions/default/.next/server/chunks/517.js": {
-          "bytesInOutput": 10809
-        },
         ".open-next/server-functions/default/.next/server/chunks/518.js": {
           "bytesInOutput": 39092
         },
-        ".open-next/server-functions/default/.next/server/chunks/527.js": {
-          "bytesInOutput": 155201
+        ".open-next/server-functions/default/.next/server/chunks/582.js": {
+          "bytesInOutput": 10809
         },
         ".open-next/server-functions/default/.next/server/chunks/682.js": {
           "bytesInOutput": 34971
@@ -5485,6 +5482,9 @@
         },
         ".open-next/server-functions/default/.next/server/chunks/738.js": {
           "bytesInOutput": 13387
+        },
+        ".open-next/server-functions/default/.next/server/chunks/777.js": {
+          "bytesInOutput": 155201
         },
         ".open-next/server-functions/default/.next/server/chunks/945.js": {
           "bytesInOutput": 6737
@@ -5522,11 +5522,11 @@
         ".open-next/server-functions/default/.next/server/app/novel/[id]/page.js": {
           "bytesInOutput": 17221
         },
-        ".open-next/server-functions/default/.next/server/app/contact/page.js": {
-          "bytesInOutput": 9021
-        },
         ".open-next/server-functions/default/.next/server/app/privacy/page.js": {
           "bytesInOutput": 11183
+        },
+        ".open-next/server-functions/default/.next/server/app/contact/page.js": {
+          "bytesInOutput": 9021
         },
         "optional-deps-missing-dependency:/critters": {
           "bytesInOutput": 141
@@ -5715,7 +5715,7 @@
           "bytesInOutput": 58734
         }
       },
-      "bytes": 2902136
+      "bytes": 2902217
     }
   }
 }
