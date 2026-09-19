@@ -1298,8 +1298,8 @@ a.whatsapp-channel-btn {
     }
     .card-actions { gap: 4px !important; }
     .btn-secondary { width: 38px !important; height: 38px !important; font-size: 1rem !important; }
-    .btn-download { padding: 8px 8px !important; font-size: 0.75rem !important; letter-spacing: normal !important; }
-    .btn-download span { font-size: 0.85rem !important; }
+    .btn-download { padding: 8px 6px !important; font-size: 0.85rem !important; letter-spacing: normal !important; }
+    .btn-download span { font-size: 0.95rem !important; }
 
     .page-top-actions {
         flex-wrap: nowrap !important;
