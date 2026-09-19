@@ -8,7 +8,7 @@ import BackToTop from "./components/BackToTop";
 import ScrollToTop from "./components/ScrollToTop";
 
 const jameelNoori = localFont({
-  src: '../public/fonts/JameelNooriNastaleeq.ttf',
+  src: '../public/fonts/JameelNooriNastaleeq-subset.woff2',
   variable: '--font-nastaliq',
   display: 'swap',
 });
