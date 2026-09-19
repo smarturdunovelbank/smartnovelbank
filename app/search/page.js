@@ -5,6 +5,7 @@ import NovelCard from "../components/NovelCard";
 import Pagination from "../components/Pagination";
 import Header from "../components/Header";
 import SearchLogger from "./SearchLogger";
+import Fuse from "fuse.js";
 
 export const metadata = {
   robots: { index: false, follow: true },
@@ -22,19 +23,47 @@ const RESTRICTED_KEYWORDS = [
 
 async function searchNovels(q, page) {
   if (!q || q.trim().length < 3) return { data: [], total: 0 };
-  const lowerQ = q.toLowerCase();
+  const cleanQuery = q.trim();
+  const lowerQ = cleanQuery.toLowerCase();
   if (RESTRICTED_KEYWORDS.some(k => lowerQ.includes(k))) return { data: [], total: 0 };
 
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  const { data, count } = await supabase
+  // 1. Exact match attempt
+  const { data: exactData, count: exactCount } = await supabase
     .from("urdu_novels")
     .select("id, Titles", { count: "exact" })
-    .ilike("Titles", `%${q.trim()}%`)
+    .ilike("Titles", `%${cleanQuery}%`)
     .range(from, to);
 
-  return { data: data || [], total: count || 0 };
+  if (exactCount > 0) {
+    return { data: exactData || [], total: exactCount };
+  }
+
+  // 2. Fuzzy search fallback
+  const { data: fuzzyCandidates, error: rpcError } = await supabase.rpc('search_novels_fuse', { search_term: cleanQuery });
+  
+  if (rpcError || !fuzzyCandidates || fuzzyCandidates.length === 0) {
+    return { data: [], total: 0 };
+  }
+
+  const fuse = new Fuse(fuzzyCandidates, {
+    keys: ['Titles'],
+    threshold: 0.4,
+    distance: 100,
+    location: 0,
+    minMatchCharLength: 2,
+    findAllMatches: true
+  });
+
+  const fuseResults = fuse.search(cleanQuery);
+  const totalFuzzy = fuseResults.length;
+  
+  // Paginate fuzzy results in memory
+  const paginatedFuzzy = fuseResults.slice(from, to + 1).map(r => r.item);
+
+  return { data: paginatedFuzzy, total: totalFuzzy };
 }
 
 export default async function SearchPage({ searchParams }) {
