@@ -43,7 +43,7 @@ export default function robots() {
       { userAgent: "omgilibot",          disallow: "/" },
 
       // ── All other bots: allow with /search and /request-status blocked ─
-      { userAgent: "*", allow: "/", disallow: ["/search", "/request-status"] },
+      { userAgent: "*", allow: "/", disallow: ["/search", "/request-status", "/api/"] },
     ],
     sitemap: `${siteUrl}/sitemap-index.xml`,
   };

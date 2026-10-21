@@ -1,11 +1,6 @@
-import { Suspense } from 'react';
 import localFont from 'next/font/local';
 import "./globals.css";
-import ThemeToggle from "./components/ThemeToggle";
-import Footer from "./components/Footer";
-
-import BackToTop from "./components/BackToTop";
-import ScrollToTop from "./components/ScrollToTop";
+import PublicShell from "./components/PublicShell";
 
 const jameelNoori = localFont({
   src: '../public/fonts/JameelNooriNastaleeq-subset.woff2',
@@ -41,12 +36,11 @@ export const metadata = {
   },
 };
 
-import ToastContainer from './components/ToastContainer';
-
 export default function RootLayout({ children }) {
   return (
     <html lang="ur" translate="no" suppressHydrationWarning className={jameelNoori.variable}>
       <head>
+        {/* Inline theme detection: prevents FOUC on page load */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -63,14 +57,14 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <div id="novel-app-wrapper">
-          <ThemeToggle />
           {children}
-          <Footer />
-          <ToastContainer />
-          <BackToTop />
-          <Suspense fallback={null}>
-            <ScrollToTop />
-          </Suspense>
+          {/*
+            PublicShell is a client component that uses usePathname() to
+            suppress itself on /admin/* routes, giving the admin dashboard a
+            fully isolated, clutter-free full-screen layout without needing
+            Next.js route group restructuring.
+          */}
+          <PublicShell />
         </div>
       </body>
     </html>

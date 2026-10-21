@@ -17,13 +17,15 @@ export default async function RequestNovelPage() {
   // Fetch maintenance toggle from Supabase single-row settings table.
   // Default to false (show form) on any fetch failure — fail open, not closed.
   let isMaintenanceMode = false;
+  let customMaintenanceMessage = null;
   try {
     const { data: settings } = await supabase
       .from("site_settings")
-      .select("request_form_maintenance")
+      .select("request_form_maintenance, maintenance_message")
       .eq("id", 1)
       .single();
     isMaintenanceMode = settings?.request_form_maintenance === true;
+    customMaintenanceMessage = settings?.maintenance_message || null;
   } catch (_) {
     // Network/query error — fall through, show the normal form
   }
@@ -78,7 +80,7 @@ export default async function RequestNovelPage() {
                   maxWidth: "440px",
                 }}
               >
-                ناول ریکوئسٹ فارم فی الحال بند ہے، جسے جلد ہی دوبارہ کھول دیا جائے گا۔ اس بارے میں آپ کو ہمارے واٹس ایپ چینل پر بتا دیا جائے گا۔
+                {customMaintenanceMessage || "ناول ریکوئسٹ فارم فی الحال بند ہے، جسے جلد ہی دوبارہ کھول دیا جائے گا۔ اس بارے میں آپ کو ہمارے واٹس ایپ چینل پر بتا دیا جائے گا۔"}
               </p>
 
               {/* WhatsApp channel button — brand green via CSS class, hover handled by CSS */}
