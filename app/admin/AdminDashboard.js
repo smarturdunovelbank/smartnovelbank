@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import ThemeToggle from "../components/ThemeToggle";
+import * as XLSX from "xlsx";
 import {
   LuBookOpen as BookOpen,
   LuBot as Bot,
@@ -34,6 +35,12 @@ import {
   LuCircleCheck as CheckCircle2,
   LuFileText as FileText,
   LuShieldCheck as ShieldCheck,
+  LuUpload as Upload,
+  LuFileSpreadsheet as FileSpreadsheet,
+  LuCircleX as XCircle,
+  LuDownload as Download,
+  LuStar as Star,
+  LuPencil as Pencil,
 } from "react-icons/lu";
 
 // ── SVG Spinner ──────────────────────────────────────────────────────────────
@@ -118,20 +125,45 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
   const [catalogMode, setCatalogMode] = useState("single"); // 'single' | 'bulk'
   const [singleTitle, setSingleTitle] = useState("");
   const [singleLink, setSingleLink] = useState("");
+  const [singleFeatured, setSingleFeatured] = useState(false);
   const [addingSingle, setAddingSingle] = useState(false);
   const [singleStatus, setSingleStatus] = useState(null); // { type: 'success'|'error', msg: '' }
 
   const [bulkText, setBulkText] = useState("");
+  const [bulkPasteFeatured, setBulkPasteFeatured] = useState(false);
   const [addingBulk, setAddingBulk] = useState(false);
   const [bulkStatus, setBulkStatus] = useState(null);
+
+  // ── Spreadsheet Bulk File Upload State ───────────────────────────────────
+  const [uploadFile, setUploadFile] = useState(null); // { name, size }
+  const [fileParsing, setFileParsing] = useState(false);
+  const [parsedFileRows, setParsedFileRows] = useState([]);
+  const [headerError, setHeaderError] = useState(null);
+  const [headerWarning, setHeaderWarning] = useState(null);
+  const [validatingDb, setValidatingDb] = useState(false);
+  const [validationDone, setValidationDone] = useState(false);
+  const [previewFilter, setPreviewFilter] = useState("all"); // 'all' | 'valid' | 'duplicate' | 'error' | 'featured'
+  const [previewPage, setPreviewPage] = useState(1);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(null); // { currentBatch, totalBatches, importedCount, totalToImport, percent, error }
+  const [importSuccessResult, setImportSuccessResult] = useState(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [bulkInputMethod, setBulkInputMethod] = useState("file"); // 'file' | 'paste'
 
   const [novels, setNovels] = useState([]);
   const [novelsLoading, setNovelsLoading] = useState(false);
   const [novelsError, setNovelsError] = useState(null);
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogTotal, setCatalogTotal] = useState(null);
+  const [togglingFeaturedId, setTogglingFeaturedId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteMsg, setDeleteMsg] = useState(null);
+
+  // ── Novel Inline Editing State ───────────────────────────────────────────
+  const [editingNovelId, setEditingNovelId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editLink, setEditLink] = useState("");
+  const [savingEditId, setSavingEditId] = useState(null);
 
   // ── Tab 2: Train AI Bot (RAG) State ──────────────────────────────────────
   const [manualTitle, setManualTitle] = useState("");
@@ -362,7 +394,7 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
 
   // ── Tab 1 Handlers: Novel Catalog ────────────────────────────────────────
 
-  // Parse bulk text into array of { title, link }
+  // Parse bulk text into array of { title, link, featured }
   const parsedBulkNovels = useMemo(() => {
     if (!bulkText.trim()) return [];
     const lines = bulkText.split("\n");
@@ -373,11 +405,18 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
       // Split by pipe |
       const parts = line.split("|").map((p) => p.trim());
       if (parts.length >= 2 && parts[0] && parts[1]) {
-        valid.push({ title: parts[0], link: parts[1] });
+        let isFeatured = bulkPasteFeatured;
+        if (parts[2]) {
+          const p2 = parts[2].toLowerCase();
+          if (["featured", "feature", "star", "true", "yes", "1"].includes(p2)) {
+            isFeatured = true;
+          }
+        }
+        valid.push({ title: parts[0], link: parts[1], featured: isFeatured });
       }
     }
     return valid;
-  }, [bulkText]);
+  }, [bulkText, bulkPasteFeatured]);
 
   // Add Single Novel
   const handleAddSingleNovel = async (e) => {
@@ -403,6 +442,7 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
         body: JSON.stringify({
           title: singleTitle.trim(),
           link: singleLink.trim(),
+          featured: singleFeatured,
         }),
       });
 
@@ -411,12 +451,30 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
         throw new Error(json.error || "Failed to add novel.");
       }
 
+      if (json.insertedCount === 0 && json.skippedDuplicatesCount > 0 && (!json.featuredAddedCount || json.featuredAddedCount === 0)) {
+        setSingleStatus({
+          type: "error",
+          msg: `Novel "${singleTitle.trim()}" already exists in the catalog (duplicate title or link).`,
+        });
+        return;
+      }
+
+      const featuredNotice = json.featuredAddedCount > 0 ? " (Also added to Featured Novels)" : "";
       setSingleStatus({
         type: "success",
-        msg: `Novel "${singleTitle.trim()}" added successfully to catalog.`,
+        msg: `Novel "${singleTitle.trim()}" added successfully to catalog${featuredNotice}.`,
       });
       setSingleTitle("");
       setSingleLink("");
+      setSingleFeatured(false);
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: { message: `Novel "${singleTitle.trim()}" added to catalog${featuredNotice}!` },
+          })
+        );
+      }
 
       // Refresh catalog
       fetchNovels(catalogSearch, token);
@@ -427,7 +485,7 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
     }
   };
 
-  // Add Bulk Novels
+  // Add Bulk Novels (Legacy Textarea Format)
   const handleAddBulkNovels = async (e) => {
     e.preventDefault();
     setBulkStatus(null);
@@ -453,6 +511,7 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
         },
         body: JSON.stringify({
           novels: parsedBulkNovels,
+          skipDuplicates: true,
         }),
       });
 
@@ -461,11 +520,13 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
         throw new Error(json.error || "Bulk insert failed.");
       }
 
+      const featNotice = json.featuredAddedCount > 0 ? ` (${json.featuredAddedCount} added to Featured Novels)` : "";
       setBulkStatus({
         type: "success",
-        msg: `Successfully added ${json.count || parsedBulkNovels.length} novels to the catalog.`,
+        msg: `Successfully added ${json.insertedCount ?? json.count ?? parsedBulkNovels.length} novel(s)${json.skippedDuplicatesCount > 0 ? ` (${json.skippedDuplicatesCount} duplicates skipped)` : ""}${featNotice}.`,
       });
       setBulkText("");
+      setBulkPasteFeatured(false);
 
       // Refresh catalog
       fetchNovels(catalogSearch, token);
@@ -473,6 +534,555 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
       setBulkStatus({ type: "error", msg: err.message || "Failed to bulk add novels." });
     } finally {
       setAddingBulk(false);
+    }
+  };
+
+  // ── Spreadsheet File Upload & Validation Pipeline ────────────────────────
+  const PREVIEW_PAGE_SIZE = 50;
+
+  // Process and parse uploaded spreadsheet file (.csv, .xlsx, .xls)
+  const processUploadedFile = async (file) => {
+    if (!file) return;
+    const fileName = file.name || "";
+    const validExts = [".csv", ".xlsx", ".xls"];
+    const hasValidExt = validExts.some((ext) => fileName.toLowerCase().endsWith(ext));
+
+    if (!hasValidExt) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: { message: "Invalid file format. Please upload a .csv, .xlsx, or .xls file." },
+          })
+        );
+      }
+      return;
+    }
+
+    setUploadFile({
+      name: file.name,
+      size: (file.size / 1024).toFixed(1) + " KB",
+    });
+    setFileParsing(true);
+    setHeaderError(null);
+    setHeaderWarning(null);
+    setParsedFileRows([]);
+    setValidationDone(false);
+    setImportSuccessResult(null);
+    setImportProgress(null);
+    setPreviewPage(1);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) {
+        throw new Error("Spreadsheet contains no worksheets.");
+      }
+
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+      if (!rawRows || rawRows.length === 0) {
+        throw new Error("The uploaded spreadsheet is empty.");
+      }
+
+      // Check row 0 for headers
+      const row0 = (rawRows[0] || []).map((c) => String(c || "").trim().toLowerCase());
+
+      let titleColIdx = row0.findIndex((h) =>
+        ["titles", "title", "novel title", "novel_title", "novel", "name"].includes(h)
+      );
+      let linkColIdx = row0.findIndex((h) =>
+        ["links", "link", "url", "download", "download link", "download_link", "read link", "pdf"].includes(h)
+      );
+      let featColIdx = row0.findIndex((h) =>
+        ["featured", "is_featured", "feature", "isfeatured", "highlight", "starred", "star"].includes(h)
+      );
+
+      let startRowIdx = 1;
+
+      // If headers not found, check fallback (Row 0 is data)
+      if (titleColIdx === -1 || linkColIdx === -1) {
+        const col0Val = String(rawRows[0]?.[0] || "").trim();
+        const col1Val = String(rawRows[0]?.[1] || "").trim();
+
+        if (col0Val.length > 0 && /^https?:\/\//i.test(col1Val)) {
+          titleColIdx = 0;
+          linkColIdx = 1;
+          startRowIdx = 0;
+          setHeaderWarning(
+            "Column headers not detected. Auto-assigned Column A as Title and Column B as Link."
+          );
+        } else {
+          setHeaderError(
+            "Could not find required 'Titles' and 'Links' headers in the spreadsheet. Please ensure your file has columns named 'Titles' and 'Links' (or 'Title' and 'Link')."
+          );
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("showToast", {
+                detail: { message: "Invalid column headers in spreadsheet." },
+              })
+            );
+          }
+          setFileParsing(false);
+          return;
+        }
+      }
+
+      // Parse data rows
+      const rows = [];
+      const seenFileTitles = new Map();
+      const seenFileLinks = new Map();
+
+      for (let r = startRowIdx; r < rawRows.length; r++) {
+        const row = rawRows[r];
+        if (!row || !Array.isArray(row)) continue;
+
+        const rawTitle = String(row[titleColIdx] ?? "").trim();
+        const rawLink = String(row[linkColIdx] ?? "").trim();
+
+        // Check optional 3rd column for featured flag
+        let isRowFeatured = false;
+        if (featColIdx !== -1 && row[featColIdx] !== undefined) {
+          const rawFeatVal = String(row[featColIdx] || "").trim().toLowerCase();
+          isRowFeatured = ["true", "yes", "1", "y", "star", "featured"].includes(rawFeatVal);
+        }
+
+        // Skip completely blank rows
+        if (!rawTitle && !rawLink) continue;
+
+        const rowNumber = r + 1;
+        const id = `row-${rowNumber}-${Math.random().toString(36).substring(2, 7)}`;
+
+        const isTitleMissing = !rawTitle || rawTitle.length < 2;
+        const isLinkMissingOrBad = !rawLink || !/^https?:\/\//i.test(rawLink);
+
+        let status = "ready";
+        let statusMsg = "Ready to import";
+
+        if (isTitleMissing && isLinkMissingOrBad) {
+          status = "invalid_both";
+          statusMsg = "Missing title & invalid URL";
+        } else if (isTitleMissing) {
+          status = "invalid_title";
+          statusMsg = "Title must be at least 2 characters";
+        } else if (isLinkMissingOrBad) {
+          status = "invalid_link";
+          statusMsg = "Invalid URL (must start with http:// or https://)";
+        } else {
+          // Check in-file duplicates
+          const normTitle = rawTitle.toLowerCase();
+          const normLink = rawLink.toLowerCase();
+
+          if (seenFileTitles.has(normTitle)) {
+            status = "duplicate_file";
+            statusMsg = `Duplicate title in file (matches row #${seenFileTitles.get(normTitle)})`;
+          } else if (seenFileLinks.has(normLink)) {
+            status = "duplicate_file";
+            statusMsg = `Duplicate URL in file (matches row #${seenFileLinks.get(normLink)})`;
+          } else {
+            seenFileTitles.set(normTitle, rowNumber);
+            seenFileLinks.set(normLink, rowNumber);
+          }
+        }
+
+        rows.push({
+          id,
+          rowNumber,
+          title: rawTitle,
+          link: rawLink,
+          status,
+          statusMsg,
+          featured: isRowFeatured,
+        });
+      }
+
+      if (rows.length === 0) {
+        setHeaderError("No novel data rows found in the uploaded file.");
+        setFileParsing(false);
+        return;
+      }
+
+      setParsedFileRows(rows);
+      setFileParsing(false);
+
+      // Check database duplicates asynchronously
+      const token = session?.access_token;
+      if (token) {
+        await runDatabaseDuplicateCheck(rows, token);
+      }
+    } catch (err) {
+      console.error("Error parsing spreadsheet file:", err);
+      setHeaderError(err.message || "Failed to parse file. Ensure it is a valid spreadsheet.");
+      setFileParsing(false);
+    }
+  };
+
+  // Run database duplicate pre-check in chunks of 250
+  const runDatabaseDuplicateCheck = async (rows, token) => {
+    setValidatingDb(true);
+    try {
+      const readyRows = rows.filter((r) => r.status === "ready");
+      if (readyRows.length === 0) {
+        setValidationDone(true);
+        return;
+      }
+
+      const CHUNK_SIZE = 250;
+      const chunks = [];
+      for (let i = 0; i < readyRows.length; i += CHUNK_SIZE) {
+        chunks.push(readyRows.slice(i, i + CHUNK_SIZE));
+      }
+
+      const dbExistingTitles = new Set();
+      const dbExistingLinks = new Set();
+      const dbExistingFeaturedTitles = new Set();
+
+      for (const chunk of chunks) {
+        const res = await fetch("/api/admin/novels", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            action: "validate",
+            novels: chunk.map((r) => ({ title: r.title, link: r.link })),
+          }),
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json.existingTitles) {
+            json.existingTitles.forEach((t) => dbExistingTitles.add(t.toLowerCase().trim()));
+          }
+          if (json.existingLinks) {
+            json.existingLinks.forEach((l) => dbExistingLinks.add(l.toLowerCase().trim()));
+          }
+          if (json.existingFeaturedTitles) {
+            json.existingFeaturedTitles.forEach((ft) => dbExistingFeaturedTitles.add(ft.toLowerCase().trim()));
+          }
+        }
+      }
+
+      setParsedFileRows((prev) =>
+        prev.map((r) => {
+          if (r.status !== "ready") return r;
+          const normTitle = r.title.toLowerCase().trim();
+          const normLink = r.link.toLowerCase().trim();
+
+          const isAlreadyInDb = dbExistingTitles.has(normTitle) || dbExistingLinks.has(normLink);
+          const isAlreadyFeatured = dbExistingFeaturedTitles.has(normTitle);
+
+          if (isAlreadyInDb) {
+            const reason = dbExistingTitles.has(normTitle)
+              ? "Already exists in database (duplicate title)"
+              : "Already exists in database (duplicate URL)";
+            return {
+              ...r,
+              status: "duplicate_db",
+              statusMsg: reason,
+              featured: isAlreadyFeatured ? true : r.featured,
+            };
+          }
+          return {
+            ...r,
+            featured: isAlreadyFeatured ? true : r.featured,
+          };
+        })
+      );
+    } catch (err) {
+      console.warn("DB duplicate pre-check error:", err);
+    } finally {
+      setValidatingDb(false);
+      setValidationDone(true);
+    }
+  };
+
+  // Remove individual row from parsed preview
+  const handleRemoveRow = (id) => {
+    setParsedFileRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  // Toggle Featured status for a single row in parsed preview
+  const handleToggleRowFeatured = (id) => {
+    setParsedFileRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, featured: !r.featured } : r))
+    );
+  };
+
+  // Star all ready rows in preview
+  const handleStarAllReadyRows = () => {
+    setParsedFileRows((prev) =>
+      prev.map((r) =>
+        r.status === "ready" || r.status === "duplicate_db" ? { ...r, featured: true } : r
+      )
+    );
+  };
+
+  // Clear all stars in preview
+  const handleClearAllStars = () => {
+    setParsedFileRows((prev) => prev.map((r) => ({ ...r, featured: false })));
+  };
+
+  // Reset file upload
+  const handleResetUpload = () => {
+    setUploadFile(null);
+    setParsedFileRows([]);
+    setHeaderError(null);
+    setHeaderWarning(null);
+    setValidationDone(false);
+    setImportSuccessResult(null);
+    setImportProgress(null);
+    setPreviewPage(1);
+  };
+
+  // Download Sample CSV Template
+  const handleDownloadSampleTemplate = () => {
+    const sampleCsv = `Titles,Links,Featured
+Jannat Ke Pattay by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-1/view,yes
+Peer e Kamil by Umera Ahmed,https://drive.google.com/file/d/sample-link-2/view,yes
+Namal by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-3/view,no
+Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
+    const blob = new Blob([sampleCsv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "novel_bulk_upload_sample.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Execute Chunked Bulk Upload (200 rows per request)
+  const handleExecuteBulkUpload = async () => {
+    const token = session?.access_token;
+    if (!token) return;
+
+    // Upload valid new rows, as well as existing DB rows that the admin specifically starred as featured
+    const validRowsToUpload = parsedFileRows.filter(
+      (r) => r.status === "ready" || (r.status === "duplicate_db" && r.featured)
+    );
+    if (validRowsToUpload.length === 0) return;
+
+    setIsImporting(true);
+    const CHUNK_SIZE = 200;
+    const totalBatches = Math.ceil(validRowsToUpload.length / CHUNK_SIZE);
+
+    setImportProgress({
+      currentBatch: 0,
+      totalBatches,
+      importedCount: 0,
+      totalToImport: validRowsToUpload.length,
+      percent: 0,
+      error: null,
+    });
+
+    const chunks = [];
+    for (let i = 0; i < validRowsToUpload.length; i += CHUNK_SIZE) {
+      chunks.push(validRowsToUpload.slice(i, i + CHUNK_SIZE));
+    }
+
+    let totalImported = 0;
+    let totalFeaturedAdded = 0;
+
+    try {
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        setImportProgress({
+          currentBatch: i + 1,
+          totalBatches,
+          importedCount: totalImported,
+          totalToImport: validRowsToUpload.length,
+          percent: Math.round((totalImported / validRowsToUpload.length) * 100),
+          error: null,
+        });
+
+        const res = await fetch("/api/admin/novels", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            novels: chunk.map((r) => ({
+              title: r.title,
+              link: r.link,
+              featured: Boolean(r.featured),
+            })),
+            skipDuplicates: true,
+          }),
+        });
+
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(
+            `Batch ${i + 1} of ${chunks.length} failed: ${json.error || res.statusText || "Database insert error"}`
+          );
+        }
+
+        totalImported += json.insertedCount ?? chunk.length;
+        totalFeaturedAdded += json.featuredAddedCount ?? 0;
+
+        setImportProgress({
+          currentBatch: i + 1,
+          totalBatches,
+          importedCount: totalImported,
+          totalToImport: validRowsToUpload.length,
+          percent: Math.round((totalImported / validRowsToUpload.length) * 100),
+          error: null,
+        });
+      }
+
+      // Success summary
+      const duplicateCount = parsedFileRows.filter(
+        (r) => r.status === "duplicate_db" || r.status === "duplicate_file"
+      ).length;
+      const invalidCount = parsedFileRows.filter((r) => r.status.startsWith("invalid_")).length;
+
+      setImportSuccessResult({
+        importedCount: totalImported,
+        featuredAddedCount: totalFeaturedAdded,
+        duplicateCount,
+        invalidCount,
+        totalRead: parsedFileRows.length,
+      });
+
+      const featNotice = totalFeaturedAdded > 0 ? ` (${totalFeaturedAdded} added to Featured Novels)` : "";
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: {
+              message: `Successfully imported ${totalImported} novels! (${duplicateCount} duplicates skipped, ${invalidCount} invalid blocked${featNotice})`,
+            },
+          })
+        );
+      }
+
+      // Refresh catalog list and count
+      fetchNovels(catalogSearch, token);
+    } catch (err) {
+      console.error("Bulk upload error:", err);
+      setImportProgress((prev) => ({
+        ...(prev || {}),
+        error: err.message || "Bulk upload encountered an error.",
+      }));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: {
+              message: `Upload halted: ${err.message || "Batch failure"}`,
+            },
+          })
+        );
+      }
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Summary counts for spreadsheet preview
+  const previewCounts = useMemo(() => {
+    let total = parsedFileRows.length;
+    let ready = 0;
+    let duplicates = 0;
+    let errors = 0;
+    let featured = 0;
+    for (const r of parsedFileRows) {
+      if (r.status === "ready") ready++;
+      else if (r.status === "duplicate_db" || r.status === "duplicate_file") duplicates++;
+      else if (r.status.startsWith("invalid_")) errors++;
+      if (r.featured) featured++;
+    }
+    return { total, ready, duplicates, errors, featured };
+  }, [parsedFileRows]);
+
+  // Filtered rows based on preview filter
+  const filteredPreviewRows = useMemo(() => {
+    if (previewFilter === "valid") {
+      return parsedFileRows.filter((r) => r.status === "ready");
+    }
+    if (previewFilter === "duplicate") {
+      return parsedFileRows.filter(
+        (r) => r.status === "duplicate_db" || r.status === "duplicate_file"
+      );
+    }
+    if (previewFilter === "error") {
+      return parsedFileRows.filter((r) => r.status.startsWith("invalid_"));
+    }
+    if (previewFilter === "featured") {
+      return parsedFileRows.filter((r) => r.featured);
+    }
+    return parsedFileRows;
+  }, [parsedFileRows, previewFilter]);
+
+  // Pagination for preview table
+  const totalPreviewPages = Math.max(1, Math.ceil(filteredPreviewRows.length / PREVIEW_PAGE_SIZE));
+  const pagedPreviewRows = useMemo(() => {
+    const start = (previewPage - 1) * PREVIEW_PAGE_SIZE;
+    return filteredPreviewRows.slice(start, start + PREVIEW_PAGE_SIZE);
+  }, [filteredPreviewRows, previewPage]);
+
+  // Toggle Featured status in main Catalog table
+  const handleToggleCatalogFeatured = async (novel) => {
+    const token = session?.access_token;
+    if (!token || !novel) return;
+
+    const newFeaturedState = !novel.featured;
+    setTogglingFeaturedId(novel.id);
+
+    // Optimistically update catalog list
+    setNovels((prev) =>
+      prev.map((n) => (n.id === novel.id ? { ...n, featured: newFeaturedState } : n))
+    );
+
+    try {
+      const res = await fetch("/api/admin/novels", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          novelId: novel.id,
+          title: novel.Titles,
+          link: novel.Links,
+          featured: newFeaturedState,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to update featured status.");
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: {
+              message: newFeaturedState
+                ? `"${novel.Titles}" added to Featured Novels.`
+                : `"${novel.Titles}" removed from Featured Novels.`,
+            },
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Toggle featured error:", err);
+      // Revert optimistic update
+      setNovels((prev) =>
+        prev.map((n) => (n.id === novel.id ? { ...n, featured: !newFeaturedState } : n))
+      );
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: { message: `Error: ${err.message || "Could not update featured status"}` },
+          })
+        );
+      }
+    } finally {
+      setTogglingFeaturedId(null);
     }
   };
 
@@ -510,6 +1120,110 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
       setDeleteMsg({ type: "error", msg: err.message || "Failed to delete novel." });
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // ── Novel Inline Edit Handlers ───────────────────────────────────────────
+  const handleStartEdit = (novel) => {
+    if (!novel) return;
+    setEditingNovelId(novel.id);
+    setEditTitle(novel.Titles || "");
+    setEditLink(novel.Links || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNovelId(null);
+    setEditTitle("");
+    setEditLink("");
+    setSavingEditId(null);
+  };
+
+  const handleSaveEdit = async (novel) => {
+    if (!novel) return;
+    const token = session?.access_token;
+    if (!token) return;
+
+    const trimmedTitle = editTitle.trim();
+    const trimmedLink = editLink.trim();
+
+    // 1. Validation checks
+    if (!trimmedTitle || trimmedTitle.length < 2) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: { message: "Error: Novel title must be at least 2 characters long." },
+          })
+        );
+      }
+      return;
+    }
+
+    if (!trimmedLink || !/^https?:\/\/.+/i.test(trimmedLink)) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: { message: "Error: Link must be a valid URL starting with http:// or https://" },
+          })
+        );
+      }
+      return;
+    }
+
+    // 2. No changes made check
+    if (trimmedTitle === novel.Titles && trimmedLink === novel.Links) {
+      handleCancelEdit();
+      return;
+    }
+
+    setSavingEditId(novel.id);
+    try {
+      const res = await fetch("/api/admin/novels", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: novel.id,
+          Titles: trimmedTitle,
+          Links: trimmedLink,
+          oldTitle: novel.Titles,
+          oldLink: novel.Links,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to update novel details.");
+      }
+
+      // Optimistically update catalog list
+      setNovels((prev) =>
+        prev.map((n) =>
+          n.id === novel.id ? { ...n, Titles: trimmedTitle, Links: trimmedLink } : n
+        )
+      );
+
+      handleCancelEdit();
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: { message: `Updated #${novel.id} successfully!` },
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Save edit novel error:", err);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("showToast", {
+            detail: { message: `Error: ${err.message || "Could not update novel"}` },
+          })
+        );
+      }
+    } finally {
+      setSavingEditId(null);
     }
   };
 
@@ -1398,7 +2112,50 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
                     </div>
                   </div>
 
-                  <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                      paddingTop: "2px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSingleFeatured((prev) => !prev)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        border: singleFeatured
+                          ? "1px solid var(--sn-gold)"
+                          : "1px solid var(--sn-paper-line)",
+                        background: singleFeatured
+                          ? "rgba(180, 140, 60, 0.12)"
+                          : "var(--sn-paper)",
+                        color: singleFeatured ? "var(--sn-gold)" : "var(--sn-text-main)",
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <Star
+                        size={16}
+                        fill={singleFeatured ? "currentColor" : "none"}
+                        style={{ color: singleFeatured ? "var(--sn-gold)" : "var(--sn-text-sub)" }}
+                      />
+                      <span>
+                        {singleFeatured
+                          ? "Featured Novel (Will be highlighted)"
+                          : "Also add to Featured Novels"}
+                      </span>
+                    </button>
+
                     <button
                       type="submit"
                       disabled={addingSingle}
@@ -1408,7 +2165,7 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
                         color: "#fff",
                         border: "none",
                         borderRadius: "8px",
-                        padding: "10px 20px",
+                        padding: "10px 22px",
                         fontSize: "0.88rem",
                         fontWeight: 600,
                         cursor: addingSingle ? "not-allowed" : "pointer",
@@ -1434,119 +2191,1172 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
                 </form>
               )}
 
-              {/* Mode 2: Bulk Add */}
+              {/* Mode 2: Bulk Import (Spreadsheet File or Legacy Paste) */}
               {catalogMode === "bulk" && (
-                <form onSubmit={handleAddBulkNovels} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {bulkStatus && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                  {/* Top Bar: Input Mode Switcher & Sample Template Download */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "10px",
+                      paddingBottom: "12px",
+                      borderBottom: "1px solid var(--sn-paper-line)",
+                    }}
+                  >
                     <div
                       style={{
-                        padding: "10px 14px",
+                        display: "inline-flex",
+                        background: "var(--sn-paper)",
+                        padding: "3px",
                         borderRadius: "8px",
-                        fontSize: "0.86rem",
-                        background: bulkStatus.type === "success" ? "rgba(47,125,90,0.1)" : "var(--sn-alert-red-bg)",
-                        color: bulkStatus.type === "success" ? "var(--sn-success)" : "var(--sn-alert-red-text)",
-                        border: `1px solid ${bulkStatus.type === "success" ? "rgba(47,125,90,0.3)" : "var(--sn-alert-red-border)"}`,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
+                        border: "1px solid var(--sn-paper-line)",
                       }}
                     >
-                      {bulkStatus.type === "success" ? (
-                        <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
-                      ) : (
-                        <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-                      )}
-                      <span>{bulkStatus.msg}</span>
-                    </div>
-                  )}
-
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "6px",
-                      }}
-                    >
-                      <label
+                      <button
+                        type="button"
+                        onClick={() => setBulkInputMethod("file")}
                         style={{
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: bulkInputMethod === "file" ? "var(--sn-ink)" : "transparent",
+                          color: bulkInputMethod === "file" ? "#fff" : "var(--sn-text-main)",
                           fontSize: "0.82rem",
                           fontWeight: 600,
-                          color: "var(--sn-text-main)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          transition: "all 0.15s ease",
                         }}
                       >
-                        Paste Novels (One per line format: <code style={{ color: "var(--sn-gold)" }}>Novel Title | https://url...</code>)
-                      </label>
-                      <span
+                        <FileSpreadsheet size={15} />
+                        <span>Spreadsheet (.csv, .xlsx, .xls)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBulkInputMethod("paste")}
                         style={{
-                          fontSize: "0.78rem",
-                          fontWeight: 500,
-                          color: parsedBulkNovels.length > 0 ? "var(--sn-success)" : "var(--sn-text-sub)",
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: bulkInputMethod === "paste" ? "var(--sn-ink)" : "transparent",
+                          color: bulkInputMethod === "paste" ? "#fff" : "var(--sn-text-main)",
+                          fontSize: "0.82rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          transition: "all 0.15s ease",
                         }}
                       >
-                        {parsedBulkNovels.length} valid novel{parsedBulkNovels.length === 1 ? "" : "s"} detected
-                      </span>
+                        <Layers size={15} />
+                        <span>Raw Text Paste</span>
+                      </button>
                     </div>
 
-                    <textarea
-                      rows={6}
-                      value={bulkText}
-                      onChange={(e) => setBulkText(e.target.value)}
-                      placeholder={`Jannat Ke Pattay by Nemrah Ahmed | https://drive.google.com/file/d/1abc...
-Aab e Hayat by Umera Ahmed | https://drive.google.com/file/d/2xyz...
-Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
-                      className="admin-input"
+                    <button
+                      type="button"
+                      onClick={handleDownloadSampleTemplate}
+                      className="admin-btn-secondary"
                       style={{
-                        width: "100%",
-                        padding: "12px",
-                        borderRadius: "8px",
+                        padding: "6px 13px",
+                        borderRadius: "6px",
                         border: "1px solid var(--sn-paper-line)",
                         background: "var(--sn-paper)",
                         color: "var(--sn-text-main)",
-                        fontSize: "0.86rem",
-                        fontFamily: "monospace",
-                        lineHeight: 1.6,
-                        boxSizing: "border-box",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <button
-                      type="submit"
-                      disabled={addingBulk || parsedBulkNovels.length === 0}
-                      className="admin-btn-primary"
-                      style={{
-                        background: parsedBulkNovels.length > 0 ? "var(--sn-ink)" : "var(--sn-paper-line)",
-                        color: parsedBulkNovels.length > 0 ? "#fff" : "var(--sn-text-sub)",
-                        border: "none",
-                        borderRadius: "8px",
-                        padding: "10px 20px",
-                        fontSize: "0.88rem",
+                        fontSize: "0.8rem",
                         fontWeight: 600,
-                        cursor: addingBulk || parsedBulkNovels.length === 0 ? "not-allowed" : "pointer",
+                        cursor: "pointer",
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: "7px",
-                        boxShadow: parsedBulkNovels.length > 0 ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                        gap: "6px",
                       }}
                     >
-                      {addingBulk ? (
-                        <>
-                          <Spinner size={15} color="#fff" />
-                          <span>Batch Importing {parsedBulkNovels.length} Novels...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Layers size={15} />
-                          <span>Batch Add {parsedBulkNovels.length} Novels</span>
-                        </>
-                      )}
+                      <Download size={13} style={{ color: "var(--sn-gold)" }} />
+                      <span>Download Sample CSV Template</span>
                     </button>
                   </div>
-                </form>
+
+                  {/* ────────────────────────────────────────────────────────── */}
+                  {/* OPTION A: Spreadsheet File Upload Mode                     */}
+                  {/* ────────────────────────────────────────────────────────── */}
+                  {bulkInputMethod === "file" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      {/* Step 1: Drop Zone (When no file parsed yet) */}
+                      {parsedFileRows.length === 0 && (
+                        <div
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setIsDraggingFile(true);
+                          }}
+                          onDragLeave={() => setIsDraggingFile(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsDraggingFile(false);
+                            const files = e.dataTransfer.files;
+                            if (files && files.length > 0) {
+                              processUploadedFile(files[0]);
+                            }
+                          }}
+                          onClick={() => {
+                            const fileInput = document.getElementById("admin-bulk-file-input");
+                            if (fileInput) fileInput.click();
+                          }}
+                          style={{
+                            border: `2px dashed ${isDraggingFile ? "var(--sn-gold)" : "var(--sn-paper-line)"}`,
+                            borderRadius: "12px",
+                            background: isDraggingFile ? "rgba(180, 140, 60, 0.05)" : "var(--sn-paper)",
+                            padding: "40px 24px",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          <input
+                            id="admin-bulk-file-input"
+                            type="file"
+                            accept=".csv, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (files && files.length > 0) {
+                                processUploadedFile(files[0]);
+                              }
+                            }}
+                          />
+
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                            <div
+                              style={{
+                                width: "52px",
+                                height: "52px",
+                                borderRadius: "50%",
+                                background: "rgba(180, 140, 60, 0.1)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--sn-gold)",
+                              }}
+                            >
+                              {fileParsing ? <Spinner size={24} color="var(--sn-gold)" /> : <Upload size={24} />}
+                            </div>
+
+                            <div>
+                              <h3 style={{ margin: "0 0 5px 0", fontSize: "1.05rem", fontWeight: 700, color: "var(--sn-ink)" }}>
+                                {fileParsing ? "Parsing & Validating Spreadsheet..." : "Click or drag & drop CSV or Excel file"}
+                              </h3>
+                              <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--sn-text-sub)" }}>
+                                Supports <strong>.csv</strong>, <strong>.xlsx</strong>, and <strong>.xls</strong> up to 1,000+ rows. Must include <code style={{ color: "var(--sn-gold)", fontWeight: 600 }}>Titles</code> and <code style={{ color: "var(--sn-gold)", fontWeight: 600 }}>Links</code> columns.
+                              </p>
+                            </div>
+
+                            <div style={{ marginTop: "6px" }}>
+                              <span
+                                className="admin-btn-secondary"
+                                style={{
+                                  padding: "7px 16px",
+                                  borderRadius: "6px",
+                                  border: "1px solid var(--sn-paper-line)",
+                                  background: "var(--sn-paper-card)",
+                                  color: "var(--sn-ink)",
+                                  fontSize: "0.82rem",
+                                  fontWeight: 600,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                }}
+                              >
+                                <FileSpreadsheet size={14} style={{ color: "var(--sn-gold)" }} />
+                                <span>Choose File from Computer</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Header Error Banner */}
+                      {headerError && (
+                        <div
+                          style={{
+                            padding: "12px 16px",
+                            borderRadius: "8px",
+                            fontSize: "0.86rem",
+                            background: "var(--sn-alert-red-bg)",
+                            color: "var(--sn-alert-red-text)",
+                            border: "1px solid var(--sn-alert-red-border)",
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "10px",
+                          }}
+                        >
+                          <XCircle size={18} style={{ flexShrink: 0, marginTop: "2px" }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, marginBottom: "2px" }}>File Structure Error</div>
+                            <div>{headerError}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 2: Spreadsheet Parsed - Interactive Preview & Validation Summary */}
+                      {parsedFileRows.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                          {/* File Meta Header Bar */}
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                              gap: "12px",
+                              padding: "12px 16px",
+                              borderRadius: "10px",
+                              background: "var(--sn-paper)",
+                              border: "1px solid var(--sn-paper-line)",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                              <div
+                                style={{
+                                  width: "34px",
+                                  height: "34px",
+                                  borderRadius: "8px",
+                                  background: "rgba(180, 140, 60, 0.12)",
+                                  color: "var(--sn-gold)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <FileSpreadsheet size={18} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--sn-ink)" }}>
+                                  {uploadFile?.name || "Uploaded Spreadsheet"}
+                                </div>
+                                <div style={{ fontSize: "0.76rem", color: "var(--sn-text-sub)" }}>
+                                  File size: {uploadFile?.size || "Unknown"} &bull; {parsedFileRows.length} total rows parsed
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Database Check Status */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                              {validatingDb && (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    fontSize: "0.8rem",
+                                    color: "var(--sn-gold)",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  <Spinner size={14} color="var(--sn-gold)" />
+                                  <span>Checking database duplicates...</span>
+                                </div>
+                              )}
+                              {!validatingDb && validationDone && (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    fontSize: "0.8rem",
+                                    color: "var(--sn-success)",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  <ShieldCheck size={16} />
+                                  <span>Database verified</span>
+                                </div>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={handleResetUpload}
+                                disabled={isImporting}
+                                className="admin-btn-secondary"
+                                style={{
+                                  padding: "6px 12px",
+                                  borderRadius: "6px",
+                                  border: "1px solid var(--sn-paper-line)",
+                                  background: "var(--sn-paper-card)",
+                                  color: "var(--sn-text-sub)",
+                                  fontSize: "0.78rem",
+                                  fontWeight: 600,
+                                  cursor: isImporting ? "not-allowed" : "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                }}
+                              >
+                                <X size={13} />
+                                <span>Upload Different File</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Header Warning Banner (e.g. Header fallback) */}
+                          {headerWarning && (
+                            <div
+                              style={{
+                                padding: "10px 14px",
+                                borderRadius: "8px",
+                                fontSize: "0.84rem",
+                                background: "rgba(180, 140, 60, 0.1)",
+                                color: "var(--sn-gold)",
+                                border: "1px solid rgba(180, 140, 60, 0.3)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
+                              <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                              <span>{headerWarning}</span>
+                            </div>
+                          )}
+
+                          {/* 4 Summary Counters */}
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                              gap: "12px",
+                            }}
+                          >
+                            {/* Counter 1: Total */}
+                            <div
+                              onClick={() => {
+                                setPreviewFilter("all");
+                                setPreviewPage(1);
+                              }}
+                              style={{
+                                padding: "12px 14px",
+                                borderRadius: "8px",
+                                background: "var(--sn-paper)",
+                                border: `1px solid ${previewFilter === "all" ? "var(--sn-ink)" : "var(--sn-paper-line)"}`,
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              <div style={{ fontSize: "0.74rem", fontWeight: 600, color: "var(--sn-text-sub)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                Total Rows Read
+                              </div>
+                              <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "var(--sn-ink)", marginTop: "4px" }}>
+                                {previewCounts.total}
+                              </div>
+                            </div>
+
+                            {/* Counter 2: Valid & Ready */}
+                            <div
+                              onClick={() => {
+                                setPreviewFilter("valid");
+                                setPreviewPage(1);
+                              }}
+                              style={{
+                                padding: "12px 14px",
+                                borderRadius: "8px",
+                                background: "rgba(47, 125, 90, 0.04)",
+                                border: `1px solid ${previewFilter === "valid" ? "var(--sn-success)" : "rgba(47, 125, 90, 0.25)"}`,
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              <div style={{ fontSize: "0.74rem", fontWeight: 600, color: "var(--sn-success)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                Ready to Import
+                              </div>
+                              <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "var(--sn-success)", marginTop: "4px" }}>
+                                {previewCounts.ready}
+                              </div>
+                            </div>
+
+                            {/* Counter 3: Duplicates */}
+                            <div
+                              onClick={() => {
+                                setPreviewFilter("duplicate");
+                                setPreviewPage(1);
+                              }}
+                              style={{
+                                padding: "12px 14px",
+                                borderRadius: "8px",
+                                background: "rgba(180, 140, 60, 0.05)",
+                                border: `1px solid ${previewFilter === "duplicate" ? "var(--sn-gold)" : "rgba(180, 140, 60, 0.25)"}`,
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              <div style={{ fontSize: "0.74rem", fontWeight: 600, color: "var(--sn-gold)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                Duplicates (Auto-Skipped)
+                              </div>
+                              <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "var(--sn-gold)", marginTop: "4px" }}>
+                                {previewCounts.duplicates}
+                              </div>
+                            </div>
+
+                            {/* Counter 4: Invalid */}
+                            <div
+                              onClick={() => {
+                                setPreviewFilter("error");
+                                setPreviewPage(1);
+                              }}
+                              style={{
+                                padding: "12px 14px",
+                                borderRadius: "8px",
+                                background: "var(--sn-alert-red-bg)",
+                                border: `1px solid ${previewFilter === "error" ? "var(--sn-alert-red-border)" : "rgba(220, 53, 69, 0.2)"}`,
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              <div style={{ fontSize: "0.74rem", fontWeight: 600, color: "var(--sn-alert-red-text)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                Invalid Rows (Blocked)
+                              </div>
+                              <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "var(--sn-alert-red-text)", marginTop: "4px" }}>
+                                {previewCounts.errors}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Filter Tabs and Row Count Bar */}
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                              gap: "10px",
+                            }}
+                          >
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                              {[
+                                { id: "all", label: "All Rows", count: previewCounts.total },
+                                { id: "valid", label: "Ready Only", count: previewCounts.ready },
+                                { id: "duplicate", label: "Duplicates", count: previewCounts.duplicates },
+                                { id: "error", label: "Errors Only", count: previewCounts.errors },
+                                ...(previewCounts.featured > 0
+                                  ? [{ id: "featured", label: "Featured", count: previewCounts.featured, isStar: true }]
+                                  : []),
+                              ].map((f) => (
+                                <button
+                                  key={f.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setPreviewFilter(f.id);
+                                    setPreviewPage(1);
+                                  }}
+                                  style={{
+                                    padding: "5px 12px",
+                                    borderRadius: "6px",
+                                    border: "1px solid var(--sn-paper-line)",
+                                    background: previewFilter === f.id ? "var(--sn-ink)" : "var(--sn-paper)",
+                                    color: previewFilter === f.id ? "#fff" : "var(--sn-text-main)",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  {f.isStar && <Star size={12} fill="currentColor" style={{ color: "var(--sn-gold)" }} />}
+                                  <span>{f.label}</span>
+                                  <span
+                                    style={{
+                                      fontSize: "0.72rem",
+                                      padding: "1px 5px",
+                                      borderRadius: "10px",
+                                      background: previewFilter === f.id ? "rgba(255,255,255,0.2)" : "var(--sn-paper-card)",
+                                    }}
+                                  >
+                                    {f.count}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Bulk Star Controls & Row Count */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                              {previewCounts.featured > 0 && (
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span
+                                    style={{
+                                      background: "rgba(180, 140, 60, 0.12)",
+                                      color: "var(--sn-gold)",
+                                      border: "1px solid rgba(180, 140, 60, 0.25)",
+                                      padding: "3px 8px",
+                                      borderRadius: "6px",
+                                      fontSize: "0.75rem",
+                                      fontWeight: 600,
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                    }}
+                                  >
+                                    <Star size={12} fill="currentColor" />
+                                    <span>{previewCounts.featured} Marked as Featured</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={handleClearAllStars}
+                                    style={{
+                                      background: "transparent",
+                                      border: "none",
+                                      color: "var(--sn-text-sub)",
+                                      fontSize: "0.74rem",
+                                      cursor: "pointer",
+                                      textDecoration: "underline",
+                                    }}
+                                  >
+                                    Clear Stars
+                                  </button>
+                                </div>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={handleStarAllReadyRows}
+                                style={{
+                                  background: "var(--sn-paper)",
+                                  border: "1px dashed var(--sn-paper-line)",
+                                  borderRadius: "6px",
+                                  padding: "3px 8px",
+                                  color: "var(--sn-text-main)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 500,
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <Star size={11} style={{ color: "var(--sn-gold)" }} />
+                                <span>Star All Ready</span>
+                              </button>
+
+                              <div style={{ fontSize: "0.78rem", color: "var(--sn-text-sub)" }}>
+                                Showing {filteredPreviewRows.length === 0 ? 0 : (previewPage - 1) * PREVIEW_PAGE_SIZE + 1}–{Math.min(previewPage * PREVIEW_PAGE_SIZE, filteredPreviewRows.length)} of {filteredPreviewRows.length} row{filteredPreviewRows.length === 1 ? "" : "s"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Preview Table */}
+                          <div
+                            style={{
+                              border: "1px solid var(--sn-paper-line)",
+                              borderRadius: "8px",
+                              overflow: "hidden",
+                              background: "var(--sn-paper)",
+                            }}
+                          >
+                            <div style={{ maxHeight: "360px", overflowY: "auto" }}>
+                              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.84rem", textAlign: "left" }}>
+                                <thead>
+                                  <tr
+                                    style={{
+                                      background: "var(--sn-paper-card)",
+                                      borderBottom: "1px solid var(--sn-paper-line)",
+                                      position: "sticky",
+                                      top: 0,
+                                      zIndex: 1,
+                                    }}
+                                  >
+                                    <th style={{ padding: "9px 12px", width: "65px", color: "var(--sn-text-sub)", fontWeight: 600 }}>Row</th>
+                                    <th style={{ padding: "9px 12px", color: "var(--sn-text-sub)", fontWeight: 600 }}>Novel Title</th>
+                                    <th style={{ padding: "9px 12px", color: "var(--sn-text-sub)", fontWeight: 600 }}>Download / Read URL</th>
+                                    <th style={{ padding: "9px 12px", width: "80px", textAlign: "center", color: "var(--sn-text-sub)", fontWeight: 600 }}>
+                                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                        <Star size={12} style={{ color: "var(--sn-gold)" }} />
+                                        <span>Featured</span>
+                                      </span>
+                                    </th>
+                                    <th style={{ padding: "9px 12px", width: "190px", color: "var(--sn-text-sub)", fontWeight: 600 }}>Status</th>
+                                    <th style={{ padding: "9px 12px", width: "50px", textAlign: "center", color: "var(--sn-text-sub)", fontWeight: 600 }}></th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {pagedPreviewRows.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={6} style={{ padding: "28px 16px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.85rem" }}>
+                                        No rows match the selected filter.
+                                      </td>
+                                    </tr>
+                                  ) : (
+                                    pagedPreviewRows.map((r) => {
+                                      const isReady = r.status === "ready";
+                                      const isDuplicate = r.status === "duplicate_db" || r.status === "duplicate_file";
+                                      const isError = r.status.startsWith("invalid_");
+
+                                      return (
+                                        <tr
+                                          key={r.id}
+                                          style={{
+                                            borderBottom: "1px solid var(--sn-paper-line)",
+                                            background: isError
+                                              ? "rgba(220, 53, 69, 0.03)"
+                                              : isDuplicate
+                                              ? "rgba(180, 140, 60, 0.02)"
+                                              : "transparent",
+                                          }}
+                                        >
+                                          {/* Row Number */}
+                                          <td style={{ padding: "8px 12px", color: "var(--sn-text-sub)", fontFamily: "monospace", fontSize: "0.8rem" }}>
+                                            #{r.rowNumber}
+                                          </td>
+
+                                          {/* Novel Title */}
+                                          <td style={{ padding: "8px 12px", color: "var(--sn-text-main)", fontWeight: 600 }}>
+                                            {r.title ? (
+                                              r.title
+                                            ) : (
+                                              <span style={{ color: "var(--sn-alert-red-text)", fontStyle: "italic", fontWeight: 400 }}>
+                                                [Missing Title]
+                                              </span>
+                                            )}
+                                          </td>
+
+                                          {/* URL */}
+                                          <td style={{ padding: "8px 12px", maxWidth: "260px" }}>
+                                            {r.link ? (
+                                              <span
+                                                title={r.link}
+                                                style={{
+                                                  display: "inline-block",
+                                                  maxWidth: "240px",
+                                                  overflow: "hidden",
+                                                  textOverflow: "ellipsis",
+                                                  whiteSpace: "nowrap",
+                                                  color: isError && !r.link.startsWith("http") ? "var(--sn-alert-red-text)" : "var(--sn-text-sub)",
+                                                  fontSize: "0.8rem",
+                                                  fontFamily: "monospace",
+                                                }}
+                                              >
+                                                {r.link}
+                                              </span>
+                                            ) : (
+                                              <span style={{ color: "var(--sn-alert-red-text)", fontStyle: "italic", fontSize: "0.8rem" }}>
+                                                [Missing URL]
+                                              </span>
+                                            )}
+                                          </td>
+
+                                          {/* Featured Star Toggle Button */}
+                                          <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleRowFeatured(r.id)}
+                                              disabled={isError}
+                                              title={
+                                                isError
+                                                  ? "Invalid rows cannot be featured"
+                                                  : r.featured
+                                                  ? "Featured Novel (Click to unstar)"
+                                                  : "Click to mark as Featured Novel"
+                                              }
+                                              style={{
+                                                background: r.featured ? "rgba(180, 140, 60, 0.12)" : "transparent",
+                                                border: r.featured ? "1px solid rgba(180, 140, 60, 0.3)" : "1px solid transparent",
+                                                borderRadius: "6px",
+                                                padding: "4px 8px",
+                                                cursor: isError ? "not-allowed" : "pointer",
+                                                color: r.featured ? "var(--sn-gold)" : "var(--sn-text-sub)",
+                                                opacity: isError ? 0.25 : 1,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                fontSize: "0.74rem",
+                                                fontWeight: 600,
+                                                transition: "all 0.15s ease",
+                                              }}
+                                            >
+                                              <Star size={15} fill={r.featured ? "currentColor" : "none"} />
+                                              {r.featured && <span>Star</span>}
+                                            </button>
+                                          </td>
+
+                                          {/* Status Badge */}
+                                          <td style={{ padding: "8px 12px" }}>
+                                            {isReady && (
+                                              <span
+                                                style={{
+                                                  display: "inline-flex",
+                                                  alignItems: "center",
+                                                  gap: "4px",
+                                                  padding: "3px 8px",
+                                                  borderRadius: "6px",
+                                                  fontSize: "0.74rem",
+                                                  fontWeight: 600,
+                                                  background: "rgba(47, 125, 90, 0.1)",
+                                                  color: "var(--sn-success)",
+                                                }}
+                                              >
+                                                <CheckCircle2 size={12} />
+                                                <span>Ready to Import</span>
+                                              </span>
+                                            )}
+
+                                            {isDuplicate && (
+                                              <span
+                                                title={r.statusMsg}
+                                                style={{
+                                                  display: "inline-flex",
+                                                  alignItems: "center",
+                                                  gap: "4px",
+                                                  padding: "3px 8px",
+                                                  borderRadius: "6px",
+                                                  fontSize: "0.74rem",
+                                                  fontWeight: 600,
+                                                  background: "rgba(180, 140, 60, 0.12)",
+                                                  color: "var(--sn-gold)",
+                                                }}
+                                              >
+                                                <AlertTriangle size={12} />
+                                                <span>{r.status === "duplicate_db" ? "Already in DB (Skip)" : "In-File Duplicate"}</span>
+                                              </span>
+                                            )}
+
+                                            {isError && (
+                                              <span
+                                                title={r.statusMsg}
+                                                style={{
+                                                  display: "inline-flex",
+                                                  alignItems: "center",
+                                                  gap: "4px",
+                                                  padding: "3px 8px",
+                                                  borderRadius: "6px",
+                                                  fontSize: "0.74rem",
+                                                  fontWeight: 600,
+                                                  background: "var(--sn-alert-red-bg)",
+                                                  color: "var(--sn-alert-red-text)",
+                                                }}
+                                              >
+                                                <XCircle size={12} />
+                                                <span>{r.statusMsg}</span>
+                                              </span>
+                                            )}
+                                          </td>
+
+                                          {/* Action Remove */}
+                                          <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleRemoveRow(r.id)}
+                                              title="Remove row from import"
+                                              style={{
+                                                background: "transparent",
+                                                border: "none",
+                                                color: "var(--sn-text-sub)",
+                                                cursor: "pointer",
+                                                padding: "4px",
+                                                borderRadius: "4px",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                              }}
+                                            >
+                                              <Trash2 size={13} />
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Pagination Footer */}
+                            {totalPreviewPages > 1 && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "8px 14px",
+                                  borderTop: "1px solid var(--sn-paper-line)",
+                                  background: "var(--sn-paper-card)",
+                                  fontSize: "0.78rem",
+                                }}
+                              >
+                                <span style={{ color: "var(--sn-text-sub)" }}>
+                                  Page {previewPage} of {totalPreviewPages}
+                                </span>
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
+                                    disabled={previewPage <= 1}
+                                    style={{
+                                      padding: "4px 10px",
+                                      borderRadius: "4px",
+                                      border: "1px solid var(--sn-paper-line)",
+                                      background: "var(--sn-paper)",
+                                      color: previewPage <= 1 ? "var(--sn-text-sub)" : "var(--sn-text-main)",
+                                      cursor: previewPage <= 1 ? "not-allowed" : "pointer",
+                                      fontSize: "0.76rem",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    Previous
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewPage((p) => Math.min(totalPreviewPages, p + 1))}
+                                    disabled={previewPage >= totalPreviewPages}
+                                    style={{
+                                      padding: "4px 10px",
+                                      borderRadius: "4px",
+                                      border: "1px solid var(--sn-paper-line)",
+                                      background: "var(--sn-paper)",
+                                      color: previewPage >= totalPreviewPages ? "var(--sn-text-sub)" : "var(--sn-text-main)",
+                                      cursor: previewPage >= totalPreviewPages ? "not-allowed" : "pointer",
+                                      fontSize: "0.76rem",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    Next
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Live Import Progress Bar */}
+                          {isImporting && importProgress && (
+                            <div
+                              style={{
+                                padding: "14px 16px",
+                                borderRadius: "8px",
+                                background: "var(--sn-paper)",
+                                border: "1px solid var(--sn-paper-line)",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  fontSize: "0.82rem",
+                                  fontWeight: 600,
+                                  color: "var(--sn-ink)",
+                                  marginBottom: "8px",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <Spinner size={14} color="var(--sn-ink)" />
+                                  <span>
+                                    Uploading batch {importProgress.currentBatch} of {importProgress.totalBatches}... ({importProgress.importedCount} / {importProgress.totalToImport} novels imported)
+                                  </span>
+                                </div>
+                                <span style={{ color: "var(--sn-gold)" }}>{importProgress.percent}%</span>
+                              </div>
+                              <div
+                                style={{
+                                  height: "8px",
+                                  borderRadius: "4px",
+                                  background: "var(--sn-paper-line)",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    height: "100%",
+                                    width: `${importProgress.percent}%`,
+                                    background: "var(--sn-ink)",
+                                    transition: "width 0.25s ease",
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Import Failure Error */}
+                          {importProgress?.error && (
+                            <div
+                              style={{
+                                padding: "12px 16px",
+                                borderRadius: "8px",
+                                fontSize: "0.86rem",
+                                background: "var(--sn-alert-red-bg)",
+                                color: "var(--sn-alert-red-text)",
+                                border: "1px solid var(--sn-alert-red-border)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
+                              <XCircle size={16} style={{ flexShrink: 0 }} />
+                              <span>{importProgress.error}</span>
+                            </div>
+                          )}
+
+                          {/* Import Success Banner */}
+                          {importSuccessResult && (
+                            <div
+                              style={{
+                                padding: "12px 16px",
+                                borderRadius: "8px",
+                                fontSize: "0.86rem",
+                                background: "rgba(47, 125, 90, 0.1)",
+                                color: "var(--sn-success)",
+                                border: "1px solid rgba(47, 125, 90, 0.3)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
+                              <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                              <span>
+                                <strong>Import Complete!</strong> Successfully inserted {importSuccessResult.importedCount} novel(s) into catalog{importSuccessResult.featuredAddedCount > 0 ? ` (${importSuccessResult.featuredAddedCount} added to Featured Novels)` : ""} ({importSuccessResult.duplicateCount} duplicate rows skipped, {importSuccessResult.invalidCount} invalid rows blocked).
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Action Buttons Bar */}
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              flexWrap: "wrap",
+                              gap: "12px",
+                              paddingTop: "6px",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                              <button
+                                type="button"
+                                onClick={handleExecuteBulkUpload}
+                                disabled={isImporting || (previewCounts.ready === 0 && previewCounts.featured === 0) || validatingDb}
+                                className="admin-btn-primary"
+                                style={{
+                                  background: (previewCounts.ready > 0 || previewCounts.featured > 0) && !isImporting && !validatingDb ? "var(--sn-ink)" : "var(--sn-paper-line)",
+                                  color: (previewCounts.ready > 0 || previewCounts.featured > 0) && !isImporting && !validatingDb ? "#fff" : "var(--sn-text-sub)",
+                                  border: "none",
+                                  borderRadius: "8px",
+                                  padding: "10px 22px",
+                                  fontSize: "0.88rem",
+                                  fontWeight: 600,
+                                  cursor: (previewCounts.ready > 0 || previewCounts.featured > 0) && !isImporting && !validatingDb ? "pointer" : "not-allowed",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "7px",
+                                  boxShadow: previewCounts.ready > 0 || previewCounts.featured > 0 ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                                }}
+                              >
+                                {isImporting ? (
+                                  <>
+                                    <Spinner size={15} color="#fff" />
+                                    <span>Importing Novels to Catalog...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload size={15} />
+                                    <span>
+                                      {previewCounts.ready > 0
+                                        ? `Import ${previewCounts.ready} Valid Novel${previewCounts.ready === 1 ? "" : "s"}${previewCounts.featured > 0 ? ` (${previewCounts.featured} Featured)` : ""} to Database`
+                                        : `Add ${previewCounts.featured} Starred Novel${previewCounts.featured === 1 ? "" : "s"} to Featured Novels`}
+                                    </span>
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={handleResetUpload}
+                                disabled={isImporting}
+                                className="admin-btn-secondary"
+                                style={{
+                                  padding: "10px 16px",
+                                  borderRadius: "8px",
+                                  border: "1px solid var(--sn-paper-line)",
+                                  background: "var(--sn-paper)",
+                                  color: "var(--sn-text-main)",
+                                  fontSize: "0.86rem",
+                                  fontWeight: 600,
+                                  cursor: isImporting ? "not-allowed" : "pointer",
+                                }}
+                              >
+                                Clear File
+                              </button>
+                            </div>
+
+                            <p style={{ margin: 0, fontSize: "0.76rem", color: "var(--sn-text-sub)" }}>
+                              Only the <strong>{previewCounts.ready}</strong> valid row(s){previewCounts.featured > 0 ? ` and ${previewCounts.featured} starred featured novel(s)` : ""} will be processed. Invalid entries are automatically blocked.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ────────────────────────────────────────────────────────── */}
+                  {/* OPTION B: Legacy Raw Text Paste Mode                       */}
+                  {/* ────────────────────────────────────────────────────────── */}
+                  {bulkInputMethod === "paste" && (
+                    <form onSubmit={handleAddBulkNovels} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      {bulkStatus && (
+                        <div
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: "8px",
+                            fontSize: "0.86rem",
+                            background: bulkStatus.type === "success" ? "rgba(47,125,90,0.1)" : "var(--sn-alert-red-bg)",
+                            color: bulkStatus.type === "success" ? "var(--sn-success)" : "var(--sn-alert-red-text)",
+                            border: `1px solid ${bulkStatus.type === "success" ? "rgba(47,125,90,0.3)" : "var(--sn-alert-red-border)"}`,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          {bulkStatus.type === "success" ? (
+                            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                          ) : (
+                            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                          )}
+                          <span>{bulkStatus.msg}</span>
+                        </div>
+                      )}
+
+                      <div>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "6px",
+                          }}
+                        >
+                          <label
+                            style={{
+                              fontSize: "0.82rem",
+                              fontWeight: 600,
+                              color: "var(--sn-text-main)",
+                            }}
+                          >
+                            Paste Novels (One per line format: <code style={{ color: "var(--sn-gold)" }}>Title | URL</code> or <code style={{ color: "var(--sn-gold)" }}>Title | URL | featured</code>)
+                          </label>
+                          <span
+                            style={{
+                              fontSize: "0.78rem",
+                              fontWeight: 500,
+                              color: parsedBulkNovels.length > 0 ? "var(--sn-success)" : "var(--sn-text-sub)",
+                            }}
+                          >
+                            {parsedBulkNovels.length} valid novel{parsedBulkNovels.length === 1 ? "" : "s"} detected
+                          </span>
+                        </div>
+
+                        <textarea
+                          rows={6}
+                          value={bulkText}
+                          onChange={(e) => setBulkText(e.target.value)}
+                          placeholder={`Jannat Ke Pattay by Nemrah Ahmed | https://drive.google.com/file/d/1abc... | featured
+Aab e Hayat by Umera Ahmed | https://drive.google.com/file/d/2xyz...
+Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
+                          className="admin-input"
+                          style={{
+                            width: "100%",
+                            padding: "12px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--sn-paper-line)",
+                            background: "var(--sn-paper)",
+                            color: "var(--sn-text-main)",
+                            fontSize: "0.86rem",
+                            fontFamily: "monospace",
+                            lineHeight: 1.6,
+                            boxSizing: "border-box",
+                            outline: "none",
+                          }}
+                        />
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          flexWrap: "wrap",
+                          gap: "12px",
+                          paddingTop: "2px",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setBulkPasteFeatured((prev) => !prev)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            border: bulkPasteFeatured
+                              ? "1px solid var(--sn-gold)"
+                              : "1px solid var(--sn-paper-line)",
+                            background: bulkPasteFeatured
+                              ? "rgba(180, 140, 60, 0.12)"
+                              : "var(--sn-paper)",
+                            color: bulkPasteFeatured ? "var(--sn-gold)" : "var(--sn-text-main)",
+                            fontSize: "0.82rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <Star
+                            size={16}
+                            fill={bulkPasteFeatured ? "currentColor" : "none"}
+                            style={{ color: bulkPasteFeatured ? "var(--sn-gold)" : "var(--sn-text-sub)" }}
+                          />
+                          <span>
+                            {bulkPasteFeatured
+                              ? "All Pasted Marked as Featured"
+                              : "Mark all pasted novels as Featured"}
+                          </span>
+                        </button>
+
+                        <button
+                          type="submit"
+                          disabled={addingBulk || parsedBulkNovels.length === 0}
+                          className="admin-btn-primary"
+                          style={{
+                            background: parsedBulkNovels.length > 0 ? "var(--sn-ink)" : "var(--sn-paper-line)",
+                            color: parsedBulkNovels.length > 0 ? "#fff" : "var(--sn-text-sub)",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "10px 20px",
+                            fontSize: "0.88rem",
+                            fontWeight: 600,
+                            cursor: addingBulk || parsedBulkNovels.length === 0 ? "not-allowed" : "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "7px",
+                            boxShadow: parsedBulkNovels.length > 0 ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                          }}
+                        >
+                          {addingBulk ? (
+                            <>
+                              <Spinner size={15} color="#fff" />
+                              <span>Batch Importing {parsedBulkNovels.length} Novels...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Layers size={15} />
+                              <span>Batch Add {parsedBulkNovels.length} Novels</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               )}
             </section>
 
@@ -1771,115 +3581,339 @@ Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
                         <th style={{ padding: "8px 12px", width: "80px" }}>ID</th>
                         <th style={{ padding: "8px 12px" }}>Novel Title</th>
                         <th style={{ padding: "8px 12px" }}>Download / Read URL</th>
-                        <th style={{ padding: "8px 12px", width: "110px", textAlign: "right" }}>Actions</th>
+                        <th style={{ padding: "8px 12px", width: "100px", textAlign: "center" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <Star size={12} style={{ color: "var(--sn-gold)" }} />
+                            <span>Featured</span>
+                          </span>
+                        </th>
+                        <th style={{ padding: "8px 12px", width: "160px", textAlign: "right" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {novels.map((novel) => (
-                        <tr
-                          key={novel.id}
-                          className="admin-novel-row"
-                          style={{
-                            background: "var(--sn-paper)",
-                            borderRadius: "8px",
-                            transition: "background 0.15s ease",
-                          }}
-                        >
-                          {/* ID */}
-                          <td
+                      {novels.map((novel) => {
+                        const isEditing = editingNovelId === novel.id;
+                        return (
+                          <tr
+                            key={novel.id}
+                            className="admin-novel-row"
                             style={{
-                              padding: "10px 12px",
-                              borderTopLeftRadius: "8px",
-                              borderBottomLeftRadius: "8px",
-                              fontWeight: 600,
-                              color: "var(--sn-gold)",
-                              fontVariantNumeric: "tabular-nums",
+                              background: isEditing
+                                ? "rgba(180, 140, 60, 0.08)"
+                                : "var(--sn-paper)",
+                              border: isEditing
+                                ? "1px solid rgba(180, 140, 60, 0.35)"
+                                : "1px solid transparent",
+                              borderRadius: "8px",
+                              transition: "background 0.15s ease",
                             }}
                           >
-                            #{novel.id}
-                          </td>
-
-                          {/* Title */}
-                          <td style={{ padding: "10px 12px", fontWeight: 600, color: "var(--sn-text-main)" }}>
-                            <Link
-                              href={`/novel/${novel.id}`}
-                              target="_blank"
+                            {/* ID */}
+                            <td
                               style={{
-                                color: "var(--sn-ink)",
-                                textDecoration: "none",
+                                padding: "10px 12px",
+                                borderTopLeftRadius: "8px",
+                                borderBottomLeftRadius: "8px",
+                                fontWeight: 600,
+                                color: "var(--sn-gold)",
+                                fontVariantNumeric: "tabular-nums",
                               }}
-                              className="admin-novel-link"
                             >
-                              {novel.Titles}
-                            </Link>
-                          </td>
+                              #{novel.id}
+                            </td>
 
-                          {/* Link */}
-                          <td style={{ padding: "10px 12px" }}>
-                            {novel.Links ? (
-                              <a
-                                href={novel.Links}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            {/* Title */}
+                            <td
+                              style={{
+                                padding: isEditing ? "6px 10px" : "10px 12px",
+                                fontWeight: 600,
+                                color: "var(--sn-text-main)",
+                                cursor: isEditing ? "default" : "pointer",
+                              }}
+                              onDoubleClick={() => !isEditing && handleStartEdit(novel)}
+                              title={!isEditing ? "Double-click to edit title" : undefined}
+                            >
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editTitle}
+                                  onChange={(e) => setEditTitle(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      handleSaveEdit(novel);
+                                    } else if (e.key === "Escape") {
+                                      e.preventDefault();
+                                      handleCancelEdit();
+                                    }
+                                  }}
+                                  placeholder="Novel Title"
+                                  autoFocus
+                                  disabled={savingEditId === novel.id}
+                                  style={{
+                                    width: "100%",
+                                    boxSizing: "border-box",
+                                    background: "var(--sn-paper-card, #ffffff)",
+                                    border: "1.5px solid var(--sn-gold, #c89d47)",
+                                    borderRadius: "6px",
+                                    padding: "6px 10px",
+                                    fontSize: "0.86rem",
+                                    fontWeight: 600,
+                                    color: "var(--sn-text-main)",
+                                    outline: "none",
+                                    boxShadow: "0 0 0 2px rgba(180, 140, 60, 0.2)",
+                                  }}
+                                />
+                              ) : (
+                                <Link
+                                  href={`/novel/${novel.id}`}
+                                  target="_blank"
+                                  style={{
+                                    color: "var(--sn-ink)",
+                                    textDecoration: "none",
+                                  }}
+                                  className="admin-novel-link"
+                                >
+                                  {novel.Titles}
+                                </Link>
+                              )}
+                            </td>
+
+                            {/* Link */}
+                            <td
+                              style={{
+                                padding: isEditing ? "6px 10px" : "10px 12px",
+                                cursor: isEditing ? "default" : "pointer",
+                              }}
+                              onDoubleClick={() => !isEditing && handleStartEdit(novel)}
+                              title={!isEditing ? "Double-click to edit link" : undefined}
+                            >
+                              {isEditing ? (
+                                <input
+                                  type="url"
+                                  value={editLink}
+                                  onChange={(e) => setEditLink(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      handleSaveEdit(novel);
+                                    } else if (e.key === "Escape") {
+                                      e.preventDefault();
+                                      handleCancelEdit();
+                                    }
+                                  }}
+                                  placeholder="https://..."
+                                  disabled={savingEditId === novel.id}
+                                  style={{
+                                    width: "100%",
+                                    boxSizing: "border-box",
+                                    background: "var(--sn-paper-card, #ffffff)",
+                                    border: "1.5px solid var(--sn-gold, #c89d47)",
+                                    borderRadius: "6px",
+                                    padding: "6px 10px",
+                                    fontSize: "0.82rem",
+                                    color: "var(--sn-text-main)",
+                                    outline: "none",
+                                    boxShadow: "0 0 0 2px rgba(180, 140, 60, 0.2)",
+                                  }}
+                                />
+                              ) : novel.Links ? (
+                                <a
+                                  href={novel.Links}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    color: "var(--sn-text-sub)",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    maxWidth: "340px",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize: "0.82rem",
+                                  }}
+                                  title={novel.Links}
+                                >
+                                  <ExternalLink size={12} style={{ flexShrink: 0, opacity: 0.6 }} />
+                                  <span>{novel.Links}</span>
+                                </a>
+                              ) : (
+                                <span style={{ color: "var(--sn-text-sub)", fontStyle: "italic", fontSize: "0.82rem" }}>
+                                  No link provided
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Featured Toggle Action */}
+                            <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCatalogFeatured(novel)}
+                                disabled={togglingFeaturedId === novel.id || isEditing || savingEditId === novel.id}
                                 style={{
-                                  color: "var(--sn-text-sub)",
+                                  background: novel.featured ? "rgba(180, 140, 60, 0.12)" : "transparent",
+                                  border: `1px solid ${novel.featured ? "rgba(180, 140, 60, 0.4)" : "var(--sn-paper-line)"}`,
+                                  color: novel.featured ? "var(--sn-gold)" : "var(--sn-text-sub)",
+                                  borderRadius: "6px",
+                                  padding: "4px 9px",
+                                  cursor: togglingFeaturedId === novel.id || isEditing ? "not-allowed" : "pointer",
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "5px",
-                                  maxWidth: "340px",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                  fontSize: "0.82rem",
+                                  fontSize: "0.76rem",
+                                  fontWeight: 600,
+                                  transition: "all 0.15s ease",
+                                  opacity: isEditing ? 0.6 : 1,
                                 }}
-                                title={novel.Links}
+                                title={novel.featured ? "Remove from Featured Novels" : "Add to Featured Novels"}
                               >
-                                <ExternalLink size={12} style={{ flexShrink: 0, opacity: 0.6 }} />
-                                <span>{novel.Links}</span>
-                              </a>
-                            ) : (
-                              <span style={{ color: "var(--sn-text-sub)", fontStyle: "italic", fontSize: "0.82rem" }}>No link provided</span>
-                            )}
-                          </td>
+                                {togglingFeaturedId === novel.id ? (
+                                  <Spinner size={12} color="var(--sn-gold)" />
+                                ) : (
+                                  <Star
+                                    size={13}
+                                    fill={novel.featured ? "currentColor" : "none"}
+                                    style={{ color: novel.featured ? "var(--sn-gold)" : "inherit" }}
+                                  />
+                                )}
+                                <span>{novel.featured ? "Featured" : "Regular"}</span>
+                              </button>
+                            </td>
 
-                          {/* Actions */}
-                          <td
-                            style={{
-                              padding: "10px 12px",
-                              borderTopRightRadius: "8px",
-                              borderBottomRightRadius: "8px",
-                              textAlign: "right",
-                            }}
-                          >
-                            <button
-                              onClick={() => handleDeleteNovel(novel.id, novel.Titles)}
-                              disabled={deletingId === novel.id}
+                            {/* Actions */}
+                            <td
                               style={{
-                                background: "var(--sn-alert-red-bg)",
-                                border: "1px solid var(--sn-alert-red-border)",
-                                color: "var(--sn-danger)",
-                                padding: "4px 10px",
-                                borderRadius: "6px",
-                                fontSize: "0.78rem",
-                                fontWeight: 500,
-                                cursor: deletingId === novel.id ? "not-allowed" : "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                transition: "all 0.15s ease",
+                                padding: "10px 12px",
+                                borderTopRightRadius: "8px",
+                                borderBottomRightRadius: "8px",
+                                textAlign: "right",
                               }}
-                              title="Delete novel"
                             >
-                              {deletingId === novel.id ? (
-                                <Spinner size={12} color="var(--sn-danger)" />
+                              {isEditing ? (
+                                <div
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    justifyContent: "flex-end",
+                                  }}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveEdit(novel)}
+                                    disabled={savingEditId === novel.id}
+                                    style={{
+                                      background: "var(--sn-maroon, #6b1d2f)",
+                                      border: "1px solid var(--sn-maroon, #6b1d2f)",
+                                      color: "#ffffff",
+                                      padding: "4px 9px",
+                                      borderRadius: "6px",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 600,
+                                      cursor: savingEditId === novel.id ? "not-allowed" : "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      transition: "all 0.15s ease",
+                                      boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                                    }}
+                                    title="Save changes (Enter)"
+                                  >
+                                    {savingEditId === novel.id ? (
+                                      <Spinner size={12} color="#ffffff" />
+                                    ) : (
+                                      <Check size={12} />
+                                    )}
+                                    <span>Save</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleCancelEdit}
+                                    disabled={savingEditId === novel.id}
+                                    style={{
+                                      background: "var(--sn-paper)",
+                                      border: "1px solid var(--sn-paper-line)",
+                                      color: "var(--sn-text-sub)",
+                                      padding: "4px 8px",
+                                      borderRadius: "6px",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 500,
+                                      cursor: savingEditId === novel.id ? "not-allowed" : "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "3px",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    title="Cancel editing (Esc)"
+                                  >
+                                    <X size={12} />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
                               ) : (
-                                <Trash2 size={12} />
+                                <div
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    justifyContent: "flex-end",
+                                  }}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEdit(novel)}
+                                    style={{
+                                      background: "var(--sn-paper)",
+                                      border: "1px solid var(--sn-paper-line)",
+                                      color: "var(--sn-text-main)",
+                                      padding: "4px 9px",
+                                      borderRadius: "6px",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 500,
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    title="Edit novel title & link"
+                                  >
+                                    <Pencil size={12} style={{ color: "var(--sn-gold)" }} />
+                                    <span>Edit</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteNovel(novel.id, novel.Titles)}
+                                    disabled={deletingId === novel.id}
+                                    style={{
+                                      background: "var(--sn-alert-red-bg)",
+                                      border: "1px solid var(--sn-alert-red-border)",
+                                      color: "var(--sn-danger)",
+                                      padding: "4px 9px",
+                                      borderRadius: "6px",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 500,
+                                      cursor: deletingId === novel.id ? "not-allowed" : "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    title="Delete novel"
+                                  >
+                                    {deletingId === novel.id ? (
+                                      <Spinner size={12} color="var(--sn-danger)" />
+                                    ) : (
+                                      <Trash2 size={12} />
+                                    )}
+                                    <span>Delete</span>
+                                  </button>
+                                </div>
                               )}
-                              <span>Delete</span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

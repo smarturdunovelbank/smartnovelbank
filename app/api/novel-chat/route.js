@@ -161,6 +161,39 @@ function extractKeywords(message) {
     .filter((w) => w.length >= 2 && !FILLER_WORDS.has(w) && !DB_BLOCKED_TERMS.has(w));
 }
 
+// ── Review / Question / Recommendation Query Intent Detectors (Task 1) ──────────
+// Matches when user is asking a question, review, summary, opinion, characters, plot,
+// or requesting genre/theme suggestions, recommendations, or novel discovery.
+function isReviewOrQuestionQuery(message) {
+  if (!message || typeof message !== "string") return false;
+  const clean = message.toLowerCase().trim();
+  if (!clean) return false;
+
+  // Contains question mark
+  if (clean.includes("?")) return true;
+
+  // Review, opinion, summary, plot, character, ending, recommendation, or inquiry intent words
+  const reviewPattern =
+    /\b(kaisa|kaisi|kaise|kese|kaisay|story|kahani|summary|synopsis|review|reviews|kon|kaun|kirdar|character|characters|ending|end|batao|bata|bataye|batayein|bataiye|baray|bare|about|kis|plot|theme|themes|hero|heroine|heroes|heroines|climax|twist|scene|scenes|opinion|opinions|rating|ratings|vibe|tropes|trope|kya|kia|kyun|kyu|kab|kahan|what|how|who|why|tell|explain|detail|details|tafseel|mukhtalif|matlab|relationship|rishta|rishtay|villain|suggest|suggestion|recommend|recommendation|koi|type|tarah|jaisa|jaisi|wala|wali|walay|hat\s+kar|hat\s+k|alag|different|unique|pasand|mood|list|top|famous|popular|rulane|hansane|funny|emotional|sad|happy|romantic|thriller|fantasy|mystery|suspense|horror|digest|trauma|social|family|revenge|cousin|marriage|army|feudal|spiritual|sufi|fairy\s+tale|historical|chahiye|saas\s*bahu|saas-bahu)\b/i;
+
+  return reviewPattern.test(clean);
+}
+
+function isRecommendationIntent(message) {
+  if (!message || typeof message !== "string") return false;
+  const clean = message.toLowerCase().trim();
+  if (!clean) return false;
+
+  return (
+    /\b(koi\s+ach[ha]|best|top|recommend|recommendation|suggestion|suggest|list|famous|mashhoor|achay|kuch\s+novel|type|tarah|jaisa|jaisi|wala|wali|walay|hat\s+kar|hat\s+k|alag|different|unique|pasand|mood|vibe|chahiye|rulane|hansane|funny)\b/i.test(
+      clean
+    ) ||
+    /\b(romantic|thriller|fantasy|mystery|suspense|horror|digest|trauma|social|family|revenge|cousin|marriage|army|feudal|spiritual|sufi|fairy\s+tale|historical|saas\s*bahu|saas-bahu)\b/i.test(
+      clean
+    )
+  );
+}
+
 // ── Fast-path for common chit-chat (0ms response, 0 quota used) ─────
 function getFastPathReply(message) {
   if (!message || typeof message !== "string") return null;
@@ -398,66 +431,184 @@ async function searchSupabase(queries) {
   return [];
 }
 
-// ── RAG: Search novel_knowledge table for matching knowledge entries ───
-// Accepts an array of cleaned keywords; queries novel_title, author,
-// genres, and characters with ilike OR across all keywords.
-// Returns up to 5 rows. Silently returns [] on any error (table may not exist yet).
-async function searchNovelKnowledge(keywords) {
-  if (!Array.isArray(keywords) || keywords.length === 0) return [];
+// ── Trope & Genre Knowledge Stop-Tokens (Task 2) ─────────────────────
+const KNOWLEDGE_STOP_TOKENS = new Set([
+  "koi", "type", "karo", "kar", "karna", "karein", "karta", "karti", "karte",
+  "novel", "novels", "suggest", "suggestion", "recommend", "recommendation",
+  "wala", "wali", "walay", "acha", "achi", "achay", "best", "top",
+  "batao", "bata", "bataye", "batayein", "bataiye", "chahiye",
+  "urdu", "kitab", "book", "books", "story", "kahani",
+  "hat", "hata", "se", "me", "mein", "par", "pe", "aur", "ya",
+  "hai", "hain", "tha", "thi", "the", "jo", "wo", "yeh", "is", "us",
+  "ho", "hoon", "hun", "to", "toh", "bhi", "kuch", "alag",
+  "please", "plz", "sirf", "thoda", "zara", "list", "name", "naam"
+]);
 
-  // Filter out very short words and common filler so we only search meaningful terms
-  const RAG_FILLER = new Set([
-    "ka", "ki", "ke", "hai", "hain", "ha", "aur", "or", "ya", "koi", "sa", "se", "ko",
-    "to", "toh", "hi", "ye", "yeh", "woh", "wo", "ab", "bhi", "is",
-    "mein", "main", "par", "pe", "tak", "the", "tha", "thi", "thay",
-    "ho", "hota", "hoti", "kon", "kaun", "kya", "kis", "kaisi", "kaisa", "kaise",
-    "wala", "wali", "walay", "batao", "bataye", "bataiye",
-    "novel", "novels", "book", "books", "pdf", "download",
-    "summary", "synopsis", "story", "kahani", "kirdar", "character",
-    "characters", "hero", "heroine", "heroines", "ending", "review", "reviews", "detail", "details",
-    "about", "kis", "bare", "baray", "relationship", "rishta", "villain",
-  ]);
+// ── In-Memory Knowledge Scoring for Recommendation & Trope Queries ──
+function scoreKnowledgeRow(row, queryText, validKeywords = []) {
+  const query = (queryText || "").toLowerCase();
+  const tokens = query
+    .replace(/[^\w\s\u0600-\u06FF-]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 3 && !KNOWLEDGE_STOP_TOKENS.has(t));
 
-  const validKeywords = keywords
-    .map((w) => (typeof w === "string" ? w.replace(/[,%()]/g, "").trim() : ""))
-    .filter((w) => w.length >= 2 && !RAG_FILLER.has(w.toLowerCase()));
+  for (const kw of validKeywords) {
+    const k = (kw || "").toLowerCase().trim();
+    if (k.length >= 3 && !KNOWLEDGE_STOP_TOKENS.has(k) && !tokens.includes(k)) {
+      tokens.push(k);
+    }
+  }
 
-  if (validKeywords.length === 0) return [];
+  let score = 0;
+  const genres = (row.genres || "").toLowerCase();
+  const summary = (row.detailed_summary || "").toLowerCase();
+  const ending = (row.ending_vibe || "").toLowerCase();
+  const characters = (row.characters || "").toLowerCase();
+  const title = (row.novel_title || "").toLowerCase();
+  const author = (row.author || "").toLowerCase();
+
+  const knownPhrases = [
+    "saas bahu", "saas-bahu", "fairy tale", "rude hero", "cousin marriage",
+    "forced marriage", "social injustice", "courtroom drama", "after marriage",
+    "revenge based", "army based", "gangster based", "secret agent", "family drama"
+  ];
+
+  for (const phrase of knownPhrases) {
+    if (query.includes(phrase)) {
+      if (genres.includes(phrase)) score += 35;
+      if (summary.includes(phrase)) score += 20;
+      if (ending.includes(phrase)) score += 15;
+      if (characters.includes(phrase)) score += 15;
+    }
+  }
+
+  for (const token of tokens) {
+    const rx = new RegExp(`\\b${token}\\b`, "i");
+    if (rx.test(title)) score += 30;
+    if (rx.test(author)) score += 20;
+    if (rx.test(genres)) score += 25;
+    if (rx.test(summary)) score += 10;
+    if (rx.test(ending)) score += 8;
+    if (rx.test(characters)) score += 8;
+  }
+
+  return score;
+}
+
+// ── Confident PDF download links search for a matched novel (Task 3) ─────
+async function findConfidentPdfMatches(novelTitle, author) {
+  if (!novelTitle || typeof novelTitle !== "string") return [];
+  const cleanTitle = novelTitle.replace(/\s*\([^)]*\)\s*/g, "").trim();
+  if (!cleanTitle || cleanTitle.length < 2) return [];
 
   try {
-    // Build OR filter across all four searchable text columns for every keyword
-    const orParts = validKeywords.flatMap((kw) => [
-      `novel_title.ilike.%${kw}%`,
-      `author.ilike.%${kw}%`,
-      `genres.ilike.%${kw}%`,
-      `characters.ilike.%${kw}%`,
-    ]);
+    let candidateNovels = [];
 
-    const { data, error } = await supabase
+    // If author is known, search title and author first
+    if (author) {
+      const authorWords = author
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length >= 3 && !["mrs", "miss", "syeda", "begum"].includes(w));
+      const firstWord = authorWords[0];
+
+      if (firstWord) {
+        const { data: authorData } = await supabase
+          .from("urdu_novels")
+          .select("Titles, Links")
+          .ilike("Titles", `%${cleanTitle}%`)
+          .ilike("Titles", `%${firstWord}%`)
+          .limit(10);
+
+        if (authorData && authorData.length > 0) {
+          candidateNovels = authorData;
+        }
+      }
+    }
+
+    if (candidateNovels.length === 0) {
+      const filters = buildIlikeFilters(cleanTitle);
+      const orFilter = filters.join(",");
+      const { data: titleData } = await supabase
+        .from("urdu_novels")
+        .select("Titles, Links")
+        .or(orFilter)
+        .limit(20);
+
+      if (titleData && titleData.length > 0) {
+        candidateNovels = titleData;
+      }
+    }
+
+    if (candidateNovels.length === 0) return [];
+
+    return scoreAndSort(candidateNovels, [cleanTitle]);
+  } catch (err) {
+    console.warn("findConfidentPdfMatches error:", err?.message);
+    return [];
+  }
+}
+
+// ── RAG: Search novel_knowledge table for matching knowledge entries ───
+// Searches novel_title, author, genres/tropes, characters, summary, and ending_vibe.
+// Uses smart in-memory scoring to prioritize top matching recommendations.
+async function searchNovelKnowledge(keywords = [], userMessage = "") {
+  try {
+    const { data: allRows, error } = await supabase
       .from("novel_knowledge")
       .select(
         "id, novel_title, author, genres, characters, ending_vibe, detailed_summary, source_url"
       )
-      .or(orParts.join(","))
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(50);
 
     if (error) {
-      // Table may not exist yet — non-fatal
       if (
         error.message?.includes("novel_knowledge") ||
         error.message?.includes("relation") ||
-        error.code === "42P01" // PostgreSQL undefined_table
+        error.code === "42P01"
       ) {
         return [];
       }
-      console.warn("searchNovelKnowledge error:", error.message);
+      console.warn("searchNovelKnowledge query error:", error.message);
       return [];
     }
 
-    return data || [];
+    if (!allRows || allRows.length === 0) return [];
+
+    // Filter valid keywords
+    const validKeywords = (Array.isArray(keywords) ? keywords : [keywords])
+      .map((w) => (typeof w === "string" ? w.replace(/[,%()]/g, "").trim() : ""))
+      .filter((w) => w.length >= 2 && !DB_BLOCKED_TERMS.has(w.toLowerCase()));
+
+    // Score all trained rows
+    const scored = allRows
+      .map((row) => ({
+        ...row,
+        _score: scoreKnowledgeRow(row, userMessage, validKeywords),
+      }))
+      .filter((row) => row._score >= 15)
+      .sort((a, b) => b._score - a._score);
+
+    if (scored.length > 0) {
+      const topScore = scored[0]._score;
+      return scored.filter((r) => r._score >= topScore * 0.6).slice(0, 3);
+    }
+
+    // Direct fallback: if keywords match title or author directly
+    if (validKeywords.length > 0) {
+      const directMatches = allRows.filter((r) => {
+        const title = (r.novel_title || "").toLowerCase();
+        const author = (r.author || "").toLowerCase();
+        return validKeywords.some(
+          (k) => title.includes(k.toLowerCase()) || author.includes(k.toLowerCase())
+        );
+      });
+      if (directMatches.length > 0) return directMatches.slice(0, 3);
+    }
+
+    return [];
   } catch (err) {
-    // Never crash the chat due to a missing/unavailable knowledge table
     console.warn("searchNovelKnowledge caught error:", err?.message);
     return [];
   }
@@ -1019,17 +1170,10 @@ export async function POST(req) {
     // ── Fast-path direct database search before AI ──────────────────
     // Skip this fast-path for: recommendation queries AND conversational/summary queries
     // so that those route to the AI for a proper text response.
-    const isRecommendationQuery =
-      /\b(koi\s+ach[ha]|best|top|recommend|suggest|list|famous|mashhoor|achay|kuch\s+novel)\b/i.test(
-        userMessage
-      );
+    const isRecommendationQuery = isRecommendationIntent(userMessage);
+    const isConversationalQuery = isReviewOrQuestionQuery(userMessage) || isRecommendationQuery;
 
-    const isConversationalQuery =
-      /\b(summary|synopsis|kahani|story|kis\s+baray|kis\s+bare|kya\s+hai|story\s+kya|about|detail|details|review|reviews|tafseel|mukhtalif|matlab|kirdar|character|characters|hero|heroine|ending|happy\s+ending|sad\s+ending|kaisa\s+hai|kaisi\s+hai|kaise\s+hai|kaisa\s+novel|kon|kaun|kon\s+hai|kon\s+hain|kaun\s+hai|kaun\s+hain|characters\s+kaun|relationship|rishta|rishtay|villain|recommend|suggest|batao|cousin\s+marriage|rude\s+hero|forced\s+marriage|suspense|thriller|romantic|trope|tropes|vibe|plot|climax|genre|genres)\b/i.test(
-        userMessage.toLowerCase()
-      );
-
-    if (!isRecommendationQuery && !isConversationalQuery) {
+    if (!isConversationalQuery) {
       const authorInfo = detectAuthorAndRequestedNovel(userMessage);
       const searchTerms = [];
 
@@ -1079,8 +1223,8 @@ export async function POST(req) {
     const groq = new Groq({ apiKey });
 
     // ── Build messages and tools — varies by query type ──────────────
-    // For conversational/summary queries: no tool calls allowed.
-    // For search/download queries: full tool-calling enabled.
+    // For conversational/summary/recommendation queries: no tool calls allowed.
+    // For direct search/download queries: full tool-calling enabled.
     let chatMessages;
     let toolsToUse;
     // convDbItems carries DB-matched items for conversational queries so we can
@@ -1097,10 +1241,12 @@ export async function POST(req) {
         "kon", "kaun", "kaisi", "kaisa", "kaise", "aur", "ya", "koi", "wala", "wali", "walay",
         "batao", "bataye", "bataiye", "bata", "de", "dein",
         "novel", "novels", "book", "books", "pdf", "download",
-        // RAG-specific filler
+        // RAG & recommendation filler
         "kirdar", "character", "characters", "hero", "heroine", "ending", "vibe", "trope", "tropes",
-        "recommend", "suggest", "genre", "genres", "plot", "climax",
-        "relationship", "rishta", "villain",
+        "recommend", "recommendation", "suggest", "suggestion", "genre", "genres", "plot", "climax",
+        "relationship", "rishta", "villain", "type", "tarah", "jaisa", "jaisi", "chahiye", "karo", "karein",
+        "hat", "kar", "alag", "pasand", "mood", "list", "top", "best", "famous", "popular", "achay", "acha", "achi",
+        "urdu"
       ]);
 
       // Strip punctuation (e.g. '?' or '.') so trailing punctuation doesn't prevent filler matching
@@ -1146,59 +1292,45 @@ export async function POST(req) {
           }
         })(),
 
-        // --- Branch B: novel_knowledge RAG search ---
+        // --- Branch B: novel_knowledge RAG search (Task 2: pass userMessage for trope/genre scoring) ---
         (async () => {
           try {
-            knowledgeItems = await searchNovelKnowledge(convSearchKeywords);
+            knowledgeItems = await searchNovelKnowledge(convSearchKeywords, userMessage);
           } catch (_) {
             knowledgeItems = [];
           }
         })(),
       ]);
 
-      // ── Step 3: Always Prioritize RAG-Matched Novel Titles for PDF Links ───
-      // Whenever verified knowledge exists, ALWAYS search urdu_novels for the exact
-      // novel titles from knowledgeItems and place those PDFs at the VERY TOP of convDbItems
-      // (replacing any generic keyword matches like "Suspense Digest" or random "Hai" novels).
+      // ── Step 3: Prioritize RAG-Matched Novel Titles for PDF Links (Task 3) ───
+      // When novel_knowledge has 1 or more matching trained novels (e.g. Borshay or Jaan),
+      // fetch their confident PDF download links from urdu_novels and attach them to convDbItems.
       if (knowledgeItems.length > 0) {
         try {
-          const ragTitles = [
-            ...new Set(
-              knowledgeItems.map((k) => k.novel_title?.trim()).filter(Boolean)
-            ),
-          ];
+          const ragDbItems = [];
+          const seenUrls = new Set();
 
-          if (ragTitles.length > 0) {
-            let ragPdfMatches = [];
-            for (const title of ragTitles) {
-              const matched = await searchSupabase([title]);
-              if (matched && matched.length > 0) {
-                const sorted = scoreAndSort(matched, [title]);
-                ragPdfMatches.push(...sorted);
+          for (const item of knowledgeItems) {
+            const matches = await findConfidentPdfMatches(item.novel_title, item.author);
+            for (const n of matches) {
+              const url = toDirectDownloadUrl(n.Links);
+              if (!seenUrls.has(url)) {
+                seenUrls.add(url);
+                ragDbItems.push({
+                  title: n.Titles,
+                  url,
+                });
               }
             }
+          }
 
-            if (ragPdfMatches.length > 0) {
-              const seenUrls = new Set();
-              const ragDbItems = [];
-              for (const n of ragPdfMatches) {
-                const url = toDirectDownloadUrl(n.Links);
-                if (!seenUrls.has(url)) {
-                  seenUrls.add(url);
-                  ragDbItems.push({
-                    title: n.Titles,
-                    url,
-                  });
-                }
-              }
+          if (ragDbItems.length > 0) {
+            // Place verified RAG novel PDFs at the very top (replacing generic matches)
+            convDbItems = ragDbItems.slice(0, 6);
 
-              // Place verified RAG novel PDFs at the very top (replacing generic matches)
-              convDbItems = ragDbItems.slice(0, 6);
-
-              dbTitleContext =
-                "\n\nDATABASE MATCH (Verified RAG novel download links):\n" +
-                convDbItems.map((it) => `- ${it.title}`).join("\n");
-            }
+            dbTitleContext =
+              "\n\nDATABASE MATCH (Verified RAG novel download links):\n" +
+              convDbItems.map((it) => `- ${it.title}`).join("\n");
           }
         } catch (_) {
           // Non-fatal
@@ -1223,33 +1355,37 @@ export async function POST(req) {
             "1. [VERIFIED NOVEL KNOWLEDGE BASE] mein jo information hai SIRF wahi use karo. " +
             "Character names, plot events, ending type ya tropes WAHI batao jo [VERIFIED NOVEL KNOWLEDGE BASE] mein LIKHA HUA hai. " +
             "Khud se koi detail invent ya imagine mat karo.\n" +
-            "2. User ke question ka jawab ek warm, friendly, engaging tone mein do jaise koi dost bata raha ho — " +
-            "Sirf 4 se 6 sentences mein, clean Roman Urdu mein. " +
-            "Ending type, characters, genres/tropes, ya summary — jo bhi user ne poocha — [VERIFIED NOVEL KNOWLEDGE BASE] se accurately bayan karo.\n" +
-            "3. Jawab ke end mein ek line add karo jo user ko PDF download karne ki taraf guide kare: " +
+            "2. User ke question ya novel recommendation request ka jawab ek warm, friendly, engaging tone mein do jaise koi dost bata raha ho — " +
+            "sirf 3 se 6 sentences mein, clean Roman Urdu mein.\n" +
+            "3. Agar user ne kisi specific genre/trope (jaise fantasy, saas-bahu se hat kar, rude hero, trauma, etc.) ki recommendation mangi hai, " +
+            "to [VERIFIED NOVEL KNOWLEDGE BASE] mein mojood matching novel (jaise Borshay by Sumaira Hameed) ko highlight kar ke recommend karo, " +
+            "aur wazahat karo ke yeh unki demand ke mutabiq kyun behtareen choice hai.\n" +
+            "4. Jawab ke end mein ek line add karo jo user ko PDF download karne ki taraf guide kare: " +
             "'Aap isay neeche diye gaye links se download kar sakte hain!'\n" +
-            "4. Writer Names: SIRF woh writer ka naam use karo jo [VERIFIED NOVEL KNOWLEDGE BASE] ya DATABASE MATCH mein diya gaya ho. " +
+            "5. Writer Names: SIRF woh writer ka naam use karo jo [VERIFIED NOVEL KNOWLEDGE BASE] ya DATABASE MATCH mein diya gaya ho. " +
             "Khud se koi aur writer mat banana.\n" +
-            "5. Spell-Check: Always spell the novel title and character names exactly as written in [VERIFIED NOVEL KNOWLEDGE BASE] (e.g., write 'Namal', never 'Namla' or 'Nam al').\n"
+            "6. Spell-Check: Always spell the novel title and character names exactly as written in [VERIFIED NOVEL KNOWLEDGE BASE] (e.g., write 'Namal', never 'Namla' or 'Nam al').\n"
           )
           : (
             // ── CASE B: No verified RAG knowledge — safe fallback only ────────────────
-            "1. Writer Names: Agar DATABASE MATCH mein novel ka naam aur writer ka naam diya gaya hai, " +
+            "1. Recommendation / Discovery: Agar user ne kisi genre/trope ya general novel ki recommendation mangi hai, " +
+            "to DATABASE MATCH mein diye gaye novels me se ya mashhoor Urdu novels me se warm and helpful andaaz mein suggest karo " +
+            "aur batao ke user neeche diye gaye links se download kar sakta hai.\n" +
+            "2. Writer Names: Agar DATABASE MATCH mein novel ka naam aur writer ka naam diya gaya hai, " +
             "to sirf wahi writer ka naam use karo. Khud se koi aur writer mat banana.\n" +
-            "2. Multiple Authors: Agar DATABASE MATCH mein ek hi title ke mukhtalif writers mojood hon, " +
+            "3. Multiple Authors: Agar DATABASE MATCH mein ek hi title ke mukhtalif writers mojood hon, " +
             "to mukhtasir tor par matching writers ka zikr karo.\n" +
-            "3. Safe Fallback: Single writer novel ke liye yeh template use karo: " +
+            "4. Safe Fallback: Specific novel question ke liye agar summary pata na ho to yeh template use karo: " +
             "'[Novel] [Author] ka likha hua mashhoor Urdu novel hai. Aap isay neeche diye gaye links se download kar ke parh sakte hain!'\n" +
-            "4. SAKHT MANA — Character names, plot details, ya fake ending type BILKUL mat batao. " +
-            "Sirf real genre ya theme bata sakte ho agar 100% pakka pata ho (e.g. Peer-e-Kamil ek spiritual novel hai).\n" +
-            "5. Agar DATABASE MATCH bhi empty hai: " +
+            "5. SAKHT MANA — Specific novel ke fake character names ya fake plot details BILKUL mat invent karo.\n" +
+            "6. Agar DATABASE MATCH bhi empty hai: " +
             "'Maazrat, mujhe is novel ke baray mein pakki malumat nahi. Hamare database mein search karein ya Request Novel page use karein.'\n"
           )
         ) +
 
-        "6. Jawab SIRF 2 se 6 sentences mein do (Case A mein thoda zyada theek hai). Bohat lamba jawab mat likho.\n" +
-        "7. MARKDOWN BILKUL NAHI: ** ya * ya ### ya bullet/numbered lists mat use karo. Sirf sada plain Roman Urdu text likhna hai.\n" +
-        "8. Download links khud mat dena — UI neeche card mein khud links dikhayegi. Koi tool call mat karna. Sirf text mein jawab do.";
+        "7. Jawab SIRF 3 se 6 sentences mein do. Bohat lamba jawab mat likho.\n" +
+        "8. MARKDOWN BILKUL NAHI: ** ya * ya ### ya bullet/numbered lists mat use karo. Sirf sada plain Roman Urdu text likhna hai.\n" +
+        "9. Download links khud text mein mat dena — UI neeche card mein khud links dikhayegi. Koi tool call mat karna. Sirf text mein jawab do.";
 
       chatMessages = [
         { role: "system", content: convSystemPrompt },
@@ -1391,9 +1527,12 @@ export async function POST(req) {
     }
 
     // ── No function call: general chat / greeting / conversational ───
-    const replyText = (responseMsg?.content || "").trim();
+    let replyText = (responseMsg?.content || "").trim();
 
     if (replyText) {
+      // Strip any markdown asterisks/hashes if LLM included them
+      replyText = replyText.replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1").replace(/[*#]/g, "").trim();
+
       // For conversational/summary queries, attach DB-matched items so the user
       // gets real download links right below the short AI text reply.
       return NextResponse.json({
