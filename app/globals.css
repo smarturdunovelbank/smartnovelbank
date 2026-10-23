@@ -1686,3 +1686,12 @@ a.whatsapp-channel-btn {
         animation: none !important;
     }
 }
+
+/* ── Remove focus outline on Recharts charts ── */
+.recharts-wrapper,
+.recharts-surface,
+.recharts-wrapper *:focus,
+.recharts-wrapper:focus,
+.recharts-surface:focus {
+    outline: none !important;
+}

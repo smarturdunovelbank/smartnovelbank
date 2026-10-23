@@ -578,6 +578,17 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
   // ══════════════════════════════════════════════════════════════════════════════
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+      {/* ── Recharts Focus Outline Reset ────────────────────────────────────── */}
+      <style>{`
+        .recharts-wrapper,
+        .recharts-surface,
+        .recharts-wrapper *:focus,
+        .recharts-wrapper:focus,
+        .recharts-surface:focus {
+          outline: none !important;
+        }
+      `}</style>
+
       {/* ── 1. COMPACT SINGLE-ROW FILTER TOOLBAR ─────────────────────────────── */}
       <div
         style={{
