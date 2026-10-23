@@ -55,9 +55,88 @@ function MiniSpinner({ size = 16 }) {
   );
 }
 
+// ── Date Formatting Helpers for Recharts Charts ──────────────────────────────
+const MONTH_NAMES_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * Parses date strings in formats: "YYYY-MM-DD", "YYYY/MM/DD", "MM-DD", "MM/DD", or "DD-MM-YYYY".
+ * Uses manual string regex parsing to prevent any UTC vs local timezone shifts.
+ */
+function parseDateParts(dateVal) {
+  if (!dateVal) return null;
+  const str = String(dateVal).trim();
+
+  // 1. "YYYY-MM-DD" or "YYYY/MM/DD" (also handles ISO strings starting with YYYY-MM-DD)
+  const ymdMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10);
+    const day = parseInt(ymdMatch[3], 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return { year, month, day, monthName: MONTH_NAMES_SHORT[month - 1] };
+    }
+  }
+
+  // 2. "MM-DD" or "MM/DD"
+  const mdMatch = str.match(/^(\d{1,2})[-/](\d{1,2})$/);
+  if (mdMatch) {
+    const month = parseInt(mdMatch[1], 10);
+    const day = parseInt(mdMatch[2], 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return {
+        year: new Date().getFullYear(),
+        month,
+        day,
+        monthName: MONTH_NAMES_SHORT[month - 1],
+      };
+    }
+  }
+
+  // 3. "DD-MM-YYYY" or "DD/MM/YYYY"
+  const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10);
+    const year = parseInt(dmyMatch[3], 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return { year, month, day, monthName: MONTH_NAMES_SHORT[month - 1] };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Converts "YYYY-MM-DD" or "MM-DD" into readable short date label like "11 Oct", "12 Oct".
+ */
+function formatDateTick(val) {
+  const parts = parseDateParts(val);
+  if (!parts) return val;
+  return `${parts.day} ${parts.monthName}`;
+}
+
+/**
+ * Formats hovered chart date clearly into full readable date, e.g. "12 Oct 2026".
+ */
+function formatTooltipDate(val, payload) {
+  const rawDate = payload?.[0]?.payload?.fullDate || payload?.[0]?.payload?.date || val;
+  const parts = parseDateParts(rawDate);
+  if (parts) {
+    return `${parts.day} ${parts.monthName} ${parts.year}`;
+  }
+  return val;
+}
+
 // ── Recharts Custom Tooltip ──────────────────────────────────────────────────
-function CustomTooltip({ active, payload, label }) {
+function CustomTooltip({ active, payload, label, labelFormatter }) {
   if (!active || !payload?.length) return null;
+  const displayLabel = labelFormatter
+    ? labelFormatter(label, payload)
+    : formatTooltipDate(label, payload);
+
   return (
     <div
       style={{
@@ -69,7 +148,7 @@ function CustomTooltip({ active, payload, label }) {
         fontSize: "0.8rem",
       }}
     >
-      <div style={{ margin: "0 0 4px 0", fontWeight: 600, color: "var(--sn-ink)" }}>{label}</div>
+      <div style={{ margin: "0 0 4px 0", fontWeight: 600, color: "var(--sn-ink)" }}>{displayLabel}</div>
       {payload.map((entry, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px", margin: "2px 0" }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: entry.color || entry.fill }} />
@@ -298,7 +377,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
   const dailyTrendData = useMemo(() => {
     if (!searchTrends?.daily) return [];
     return searchTrends.daily.map((d) => ({
-      date: d.date.slice(5), // "MM-DD"
+      date: d.date, // "YYYY-MM-DD" e.g., "2026-10-12"
       fullDate: d.date,
       total: d.total,
       success: d.success ?? d.found,
@@ -800,9 +879,9 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
             }
           >
             {dailyTrendData.length > 0 ? (
-              <div style={{ width: "100%", height: 260 }}>
+              <div style={{ width: "100%", height: 280 }}>
                 <ResponsiveContainer>
-                  <AreaChart data={dailyTrendData} margin={{ top: 8, right: 10, left: -15, bottom: 0 }}>
+                  <AreaChart data={dailyTrendData} margin={{ top: 8, right: 10, left: -15, bottom: 8 }}>
                     <defs>
                       <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={PALETTE.gold} stopOpacity={0.25} />
@@ -820,14 +899,19 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--sn-paper-line)" opacity={0.6} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
+                      tickFormatter={formatDateTick}
+                      interval={dailyTrendData.length <= 40 ? 0 : "preserveStartEnd"}
+                      angle={-35}
+                      textAnchor="end"
+                      height={48}
+                      tick={{ fontSize: 10, fill: "var(--sn-text-sub)" }}
                       stroke="var(--sn-paper-line)"
                     />
                     <YAxis
                       tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
                       stroke="var(--sn-paper-line)"
                     />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip labelFormatter={formatTooltipDate} />} />
                     <Legend
                       verticalAlign="top"
                       height={32}
@@ -840,6 +924,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       stroke={PALETTE.gold}
                       strokeWidth={2}
                       fill="url(#gradTotal)"
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
                     />
                     <Area
                       type="monotone"
@@ -848,6 +934,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       stroke={PALETTE.emerald}
                       strokeWidth={1.8}
                       fill="url(#gradSuccess)"
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
                     />
                     <Area
                       type="monotone"
@@ -856,6 +944,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       stroke={PALETTE.maroon}
                       strokeWidth={1.8}
                       fill="url(#gradNoResults)"
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
