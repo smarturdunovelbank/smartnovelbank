@@ -41,7 +41,9 @@ import {
   LuDownload as Download,
   LuStar as Star,
   LuPencil as Pencil,
+  LuChartColumn as BarChart3,
 } from "react-icons/lu";
+import AnalyticsDashboard from "./AnalyticsDashboard";
 
 // ── SVG Spinner ──────────────────────────────────────────────────────────────
 function Spinner({ size = 18, color = "currentColor" }) {
@@ -99,7 +101,7 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
 
   // Sync tab with URL if param changes
   useEffect(() => {
-    if (queryTab && ["catalog", "train-bot", "settings"].includes(queryTab)) {
+    if (queryTab && ["catalog", "train-bot", "settings", "analytics"].includes(queryTab)) {
       setActiveTab(queryTab);
     }
   }, [queryTab]);
@@ -1916,6 +1918,39 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
                   : "All Systems Active"
               }
             />
+          </button>
+
+          {/* Tab 4: Visual Analytics Dashboard */}
+          <button
+            role="tab"
+            aria-selected={activeTab === "analytics"}
+            onClick={() => switchTab("analytics")}
+            className={`admin-nav-tab ${activeTab === "analytics" ? "active" : ""}`}
+            style={{
+              padding: "10px 16px",
+              background: "transparent",
+              border: "none",
+              borderBottom: activeTab === "analytics" ? "2px solid var(--sn-gold)" : "2px solid transparent",
+              color: activeTab === "analytics" ? "var(--sn-ink)" : "var(--sn-text-sub)",
+              fontWeight: activeTab === "analytics" ? 600 : 500,
+              fontSize: "0.88rem",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              whiteSpace: "nowrap",
+              transition: "all 0.15s ease",
+              marginBottom: "-1px",
+            }}
+          >
+            <BarChart3
+              size={16}
+              style={{
+                color: activeTab === "analytics" ? "var(--sn-gold)" : "currentColor",
+                opacity: activeTab === "analytics" ? 1 : 0.7,
+              }}
+            />
+            <span>Analytics</span>
           </button>
         </div>
 
@@ -5141,6 +5176,23 @@ Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
               </form>
             </section>
           </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            TAB 4: VISUAL ANALYTICS DASHBOARD
+        ════════════════════════════════════════════════════════════════════ */}
+        {activeTab === "analytics" && (
+          <AnalyticsDashboard
+            session={session}
+            onSwitchToSingleEntry={(prefillTitle) => {
+              setCatalogMode("single");
+              setSingleTitle(prefillTitle || "");
+              switchTab("catalog");
+              if (typeof window !== "undefined") {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+          />
         )}
       </main>
 

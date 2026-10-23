@@ -1,0 +1,1685 @@
+"use client";
+
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  Cell,
+} from "recharts";
+import {
+  LuSearch as Search,
+  LuRefreshCw as RefreshCw,
+  LuTrendingUp as TrendingUp,
+  LuUsers as Users,
+  LuTarget as Target,
+  LuDices as Dice,
+  LuPlus as Plus,
+  LuDownload as Download,
+  LuSmartphone as Smartphone,
+  LuMonitor as Monitor,
+  LuClock as Clock,
+  LuCircleAlert as AlertCircle,
+  LuCircleCheck as CheckCircle,
+  LuCircleX as XCircle,
+  LuCalendar as Calendar,
+  LuActivity as Activity,
+  LuChartColumn as BarChart3,
+  LuChevronLeft as ChevronLeft,
+  LuChevronRight as ChevronRight,
+  LuSlidersHorizontal as FilterIcon,
+} from "react-icons/lu";
+
+// ── Reusable spinner ─────────────────────────────────────────────────────────
+function MiniSpinner({ size = 16 }) {
+  return (
+    <svg
+      style={{ animation: "admin-spin 0.85s linear infinite", width: size, height: size, flexShrink: 0 }}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" opacity="0.2" />
+      <path
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  );
+}
+
+// ── Recharts Custom Tooltip ──────────────────────────────────────────────────
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div
+      style={{
+        background: "var(--sn-paper-card)",
+        border: "1px solid var(--sn-paper-line)",
+        borderRadius: "8px",
+        padding: "8px 12px",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+        fontSize: "0.8rem",
+      }}
+    >
+      <div style={{ margin: "0 0 4px 0", fontWeight: 600, color: "var(--sn-ink)" }}>{label}</div>
+      {payload.map((entry, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px", margin: "2px 0" }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: entry.color || entry.fill }} />
+          <span style={{ color: "var(--sn-text-sub)", fontSize: "0.75rem" }}>{entry.name}:</span>
+          <strong style={{ color: "var(--sn-ink)", fontSize: "0.78rem", fontVariantNumeric: "tabular-nums" }}>
+            {entry.value?.toLocaleString()}
+          </strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── KPI Scorecard (Clean, minimal, no heavy top borders) ─────────────────────
+function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
+  return (
+    <div
+      style={{
+        background: "var(--sn-paper-card)",
+        border: "1px solid var(--sn-paper-line)",
+        borderRadius: "12px",
+        padding: "18px 20px",
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "8px",
+            background: "var(--sn-paper)",
+            border: "1px solid var(--sn-paper-line)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: iconColor || "var(--sn-gold)",
+          }}
+        >
+          <Icon size={16} strokeWidth={1.75} />
+        </div>
+        <span style={{ fontSize: "0.8rem", color: "var(--sn-text-sub)", fontWeight: 500 }}>{label}</span>
+      </div>
+
+      <div
+        style={{
+          fontSize: "1.75rem",
+          fontWeight: 700,
+          color: "var(--sn-ink)",
+          fontVariantNumeric: "tabular-nums",
+          letterSpacing: "-0.02em",
+          lineHeight: 1.15,
+        }}
+      >
+        {value}
+      </div>
+
+      {subValue && (
+        <div
+          style={{
+            fontSize: "0.75rem",
+            color: "var(--sn-text-sub)",
+            lineHeight: 1.35,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+          title={typeof subValue === "string" ? subValue : undefined}
+        >
+          {subValue}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Section Container (Subtle 1px border, no heavy top strip) ────────────────
+function SectionCard({ title, icon: Icon, action, children, style: extraStyle }) {
+  return (
+    <section
+      style={{
+        background: "var(--sn-paper-card)",
+        border: "1px solid var(--sn-paper-line)",
+        borderRadius: "12px",
+        padding: "20px 22px",
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03)",
+        ...extraStyle,
+      }}
+    >
+      {title && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "16px",
+            flexWrap: "wrap",
+            gap: "8px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {Icon && <Icon size={16} strokeWidth={1.75} style={{ color: "var(--sn-gold)" }} />}
+            <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600, color: "var(--sn-ink)" }}>{title}</h3>
+          </div>
+          {action}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
+// ── Cohesive Editorial Color Palette ─────────────────────────────────────────
+const PALETTE = {
+  gold: "#c59b27",
+  emerald: "#2d6a4f",
+  maroon: "#6b1d2f",
+  ink: "#2c1810",
+  slate: "#64748b",
+};
+
+// ════════════════════════════════════════════════════════════════════════════════
+// MAIN ANALYTICS DASHBOARD COMPONENT
+// ════════════════════════════════════════════════════════════════════════════════
+export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
+  // ── States ─────────────────────────────────────────────────────────────────
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Filters
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [device, setDevice] = useState("");
+  const [activePreset, setActivePreset] = useState("all");
+
+  // Sub-Navigation Segment: 'overview' | 'traffic' | 'surprise' | 'stream'
+  const [activeSegment, setActiveSegment] = useState("overview");
+
+  // Overview table pagination/limit state
+  const [missingLimit, setMissingLimit] = useState(8);
+  const [successfulLimit, setSuccessfulLimit] = useState(8);
+
+  // Live Activity Stream controls
+  const [streamSearch, setStreamSearch] = useState("");
+  const [streamFilter, setStreamFilter] = useState("all"); // 'all' | 'found' | 'notFound'
+  const [streamPage, setStreamPage] = useState(1);
+  const STREAM_PER_PAGE = 20;
+
+  // ── Date Presets ───────────────────────────────────────────────────────────
+  const applyPreset = (preset) => {
+    setActivePreset(preset);
+    const now = new Date();
+    if (preset === "all") {
+      setStartDate("");
+      setEndDate("");
+    } else if (preset === "today") {
+      const todayStr = now.toISOString().slice(0, 10);
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (preset === "7days") {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      setStartDate(d.toISOString().slice(0, 10));
+      setEndDate(now.toISOString().slice(0, 10));
+    } else if (preset === "30days") {
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      setStartDate(d.toISOString().slice(0, 10));
+      setEndDate(now.toISOString().slice(0, 10));
+    }
+  };
+
+  // ── Fetch Analytics ────────────────────────────────────────────────────────
+  const fetchAnalytics = useCallback(
+    async (forceRefresh = false) => {
+      const token = session?.access_token;
+      if (!token) return;
+
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        if (forceRefresh) params.set("refresh", "true");
+        if (startDate) params.set("startDate", startDate);
+        if (endDate) params.set("endDate", endDate);
+        if (device) params.set("device", device);
+        params.set("topN", "50");
+
+        const res = await fetch(`/api/admin/analytics?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+          throw new Error(json.error || `HTTP ${res.status}: Failed to load analytics`);
+        }
+        setAnalyticsData(json);
+      } catch (err) {
+        console.error("fetchAnalytics error:", err);
+        setError(err.message || "Failed to load analytics.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [session?.access_token, startDate, endDate, device]
+  );
+
+  // Initial fetch
+  useEffect(() => {
+    if (session?.access_token) {
+      fetchAnalytics(false);
+    }
+  }, [session?.access_token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Derived Data ───────────────────────────────────────────────────────────
+  const searchOverview = analyticsData?.searchAnalytics?.overview;
+  const searchTrends = analyticsData?.searchAnalytics?.trends;
+  const queryInsights = analyticsData?.searchAnalytics?.queryInsights;
+  const surprise = analyticsData?.surpriseAnalytics;
+
+  // Daily Trends for Area Chart
+  const dailyTrendData = useMemo(() => {
+    if (!searchTrends?.daily) return [];
+    return searchTrends.daily.map((d) => ({
+      date: d.date.slice(5), // "MM-DD"
+      fullDate: d.date,
+      total: d.total,
+      success: d.success ?? d.found,
+      noResults: d.noResults ?? d.notFound,
+    }));
+  }, [searchTrends?.daily]);
+
+  // Hourly Distribution for Bar Chart
+  const hourlyData = useMemo(() => {
+    if (!searchTrends?.hourlyDistribution) return [];
+    return searchTrends.hourlyDistribution.map((count, hour) => ({
+      hour: `${hour.toString().padStart(2, "0")}:00`,
+      searches: count,
+    }));
+  }, [searchTrends?.hourlyDistribution]);
+
+  // Surprise Funnel Data (Warm editorial palette: Gold, Maroon, Emerald)
+  const funnelData = useMemo(() => {
+    if (!surprise?.funnel) return [];
+    return [
+      { name: "Clicks", value: surprise.funnel.clicks, fill: PALETTE.gold },
+      { name: "Rerolls", value: surprise.funnel.rerolls, fill: PALETTE.maroon },
+      { name: "Downloads", value: surprise.funnel.downloads, fill: PALETTE.emerald },
+    ];
+  }, [surprise?.funnel]);
+
+  // Actionable query tables
+  const topMissingQueries = useMemo(() => {
+    return queryInsights?.topMissingQueries || [];
+  }, [queryInsights?.topMissingQueries]);
+
+  const topSuccessfulQueries = useMemo(() => {
+    return queryInsights?.topSuccessfulQueries || queryInsights?.topQueries?.filter((q) => q.found > 0) || [];
+  }, [queryInsights?.topSuccessfulQueries, queryInsights?.topQueries]);
+
+  const topSurpriseDownloads = useMemo(() => {
+    return surprise?.topDownloadedSurpriseNovels || surprise?.topDownloads || [];
+  }, [surprise?.topDownloadedSurpriseNovels, surprise?.topDownloads]);
+
+  const topSurpriseRerolls = useMemo(() => {
+    return surprise?.topRerolls || [];
+  }, [surprise?.topRerolls]);
+
+  // Live Activity Stream filtering & pagination
+  const allRecentSearches = useMemo(() => {
+    return queryInsights?.recentSearches || [];
+  }, [queryInsights?.recentSearches]);
+
+  const filteredRecentSearches = useMemo(() => {
+    return allRecentSearches.filter((item) => {
+      if (streamSearch) {
+        const s = streamSearch.toLowerCase();
+        const matchesQuery = item.query?.toLowerCase().includes(s);
+        const matchesUser = item.userId?.toLowerCase().includes(s);
+        if (!matchesQuery && !matchesUser) return false;
+      }
+      if (streamFilter === "found" && item.resultFound !== "Yes") return false;
+      if (streamFilter === "notFound" && item.resultFound === "Yes") return false;
+      return true;
+    });
+  }, [allRecentSearches, streamSearch, streamFilter]);
+
+  const totalStreamPages = Math.ceil(filteredRecentSearches.length / STREAM_PER_PAGE) || 1;
+  const paginatedRecentSearches = useMemo(() => {
+    const start = (streamPage - 1) * STREAM_PER_PAGE;
+    return filteredRecentSearches.slice(start, start + STREAM_PER_PAGE);
+  }, [filteredRecentSearches, streamPage]);
+
+  // Handle "Add to Catalog"
+  const handleAddToCatalog = (queryText) => {
+    if (onSwitchToSingleEntry) {
+      onSwitchToSingleEntry(queryText);
+    }
+  };
+
+  // ── Common Shared Styles ───────────────────────────────────────────────────
+  const compactInputStyle = {
+    padding: "6px 10px",
+    borderRadius: "6px",
+    border: "1px solid var(--sn-paper-line)",
+    background: "var(--sn-paper)",
+    color: "var(--sn-text-main)",
+    fontSize: "0.8rem",
+    outline: "none",
+  };
+
+  const tableHeaderStyle = {
+    padding: "10px 14px",
+    textAlign: "left",
+    fontSize: "0.72rem",
+    fontWeight: 600,
+    color: "var(--sn-text-sub)",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    borderBottom: "1px solid var(--sn-paper-line)",
+    background: "var(--sn-paper)",
+    whiteSpace: "nowrap",
+  };
+
+  const tableCellStyle = {
+    padding: "12px 14px",
+    fontSize: "0.83rem",
+    color: "var(--sn-text-main)",
+    borderBottom: "1px solid var(--sn-paper-line)",
+    verticalAlign: "middle",
+  };
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // RENDER: Error State
+  // ══════════════════════════════════════════════════════════════════════════════
+  if (error && !analyticsData) {
+    const isCredentialsError =
+      error.toLowerCase().includes("google sheets") ||
+      error.toLowerCase().includes("missing google sheets") ||
+      error.toLowerCase().includes("credentials");
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <SectionCard title="Analytics Engine Status" icon={AlertCircle}>
+          <div
+            style={{
+              background: "var(--sn-alert-red-bg)",
+              border: "1px solid var(--sn-alert-red-border)",
+              borderRadius: "10px",
+              padding: "20px",
+              color: "var(--sn-alert-red-text)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+              <AlertCircle size={18} strokeWidth={2} style={{ color: "var(--sn-danger)" }} />
+              <h4 style={{ margin: 0, fontSize: "0.98rem", fontWeight: 600 }}>
+                Unable to Load Google Sheets Analytics
+              </h4>
+            </div>
+
+            <p style={{ margin: "0 0 14px 0", fontSize: "0.85rem", lineHeight: 1.45 }}>{error}</p>
+
+            {isCredentialsError && (
+              <div
+                style={{
+                  background: "var(--sn-paper)",
+                  border: "1px solid var(--sn-paper-line)",
+                  borderRadius: "8px",
+                  padding: "14px 16px",
+                  marginBottom: "16px",
+                  color: "var(--sn-text-main)",
+                }}
+              >
+                <div style={{ margin: "0 0 6px 0", fontWeight: 600, fontSize: "0.84rem", color: "var(--sn-ink)" }}>
+                  Configuration Required
+                </div>
+                <div style={{ margin: "0 0 8px 0", fontSize: "0.78rem", color: "var(--sn-text-sub)" }}>
+                  Add the following environment variables to your <code>.env.local</code> file and restart Next.js:
+                </div>
+                <pre
+                  style={{
+                    background: "rgba(0,0,0,0.04)",
+                    padding: "10px 12px",
+                    borderRadius: "6px",
+                    fontSize: "0.78rem",
+                    fontFamily: "monospace",
+                    margin: 0,
+                    overflowX: "auto",
+                  }}
+                >
+                  GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id_here{"\n"}
+                  GOOGLE_SHEETS_API_KEY=your_google_api_key_here
+                </pre>
+              </div>
+            )}
+
+            <button
+              onClick={() => fetchAnalytics(true)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "6px",
+                background: "var(--sn-ink)",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <RefreshCw size={13} strokeWidth={1.75} /> Retry
+            </button>
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // RENDER: Main Executive SaaS Layout
+  // ══════════════════════════════════════════════════════════════════════════════
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+      {/* ── 1. COMPACT SINGLE-ROW FILTER TOOLBAR ─────────────────────────────── */}
+      <div
+        style={{
+          background: "var(--sn-paper-card)",
+          border: "1px solid var(--sn-paper-line)",
+          borderRadius: "12px",
+          padding: "10px 16px",
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "10px",
+        }}
+      >
+        {/* Left Side: Presets, Date inputs, Device dropdown, Apply */}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+          {/* Segmented Preset Pills */}
+          <div
+            style={{
+              display: "inline-flex",
+              background: "var(--sn-paper)",
+              border: "1px solid var(--sn-paper-line)",
+              borderRadius: "7px",
+              padding: "2px",
+              gap: "2px",
+            }}
+          >
+            {[
+              { id: "all", label: "All Time" },
+              { id: "today", label: "Today" },
+              { id: "7days", label: "7D" },
+              { id: "30days", label: "30D" },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p.id)}
+                style={{
+                  padding: "4px 9px",
+                  borderRadius: "5px",
+                  border: "none",
+                  background: activePreset === p.id ? "var(--sn-paper-card)" : "transparent",
+                  color: activePreset === p.id ? "var(--sn-ink)" : "var(--sn-text-sub)",
+                  fontSize: "0.76rem",
+                  fontWeight: activePreset === p.id ? 600 : 500,
+                  cursor: "pointer",
+                  boxShadow: activePreset === p.id ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                  transition: "all 0.12s ease",
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Compact Date Range Pickers */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+            <Calendar size={13} strokeWidth={1.75} style={{ color: "var(--sn-text-sub)" }} />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setActivePreset("custom");
+              }}
+              style={compactInputStyle}
+              className="admin-input"
+              title="Start date"
+            />
+            <span style={{ color: "var(--sn-text-sub)", fontSize: "0.78rem" }}>–</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setActivePreset("custom");
+              }}
+              style={compactInputStyle}
+              className="admin-input"
+              title="End date"
+            />
+          </div>
+
+          {/* Device dropdown (Clean text, no emojis) */}
+          <select
+            value={device}
+            onChange={(e) => setDevice(e.target.value)}
+            style={{ ...compactInputStyle, cursor: "pointer", minWidth: "105px" }}
+            className="admin-input"
+          >
+            <option value="">All Devices</option>
+            <option value="Mobile">Mobile</option>
+            <option value="Desktop">Desktop</option>
+          </select>
+
+          {/* Apply Button */}
+          <button
+            type="button"
+            onClick={() => fetchAnalytics(false)}
+            disabled={loading}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid var(--sn-paper-line)",
+              background: "var(--sn-paper)",
+              color: "var(--sn-ink)",
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              cursor: loading ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              transition: "all 0.12s ease",
+            }}
+          >
+            <Search size={12} strokeWidth={1.75} /> Apply
+          </button>
+        </div>
+
+        {/* Right Side: Subtle Cached timestamp + Refresh button */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {analyticsData?.cached && analyticsData.cachedAt && (
+            <span style={{ fontSize: "0.74rem", color: "var(--sn-text-sub)", whiteSpace: "nowrap" }}>
+              Cached {new Date(analyticsData.cachedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={() => fetchAnalytics(true)}
+            disabled={loading}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid var(--sn-paper-line)",
+              background: "transparent",
+              color: "var(--sn-text-main)",
+              fontSize: "0.78rem",
+              fontWeight: 500,
+              cursor: loading ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.12s ease",
+            }}
+            title="Refresh from Google Sheets"
+          >
+            <RefreshCw
+              size={12}
+              strokeWidth={1.75}
+              style={{
+                animation: loading ? "admin-spin 0.85s linear infinite" : "none",
+                color: "var(--sn-gold)",
+              }}
+            />
+            <span>{loading ? "Refreshing" : "Refresh"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── 2. SUB-NAVIGATION SEGMENTS ────────────────────────────────────────── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+        <div
+          style={{
+            display: "inline-flex",
+            background: "var(--sn-paper)",
+            border: "1px solid var(--sn-paper-line)",
+            borderRadius: "8px",
+            padding: "3px",
+            gap: "2px",
+          }}
+        >
+          {[
+            { id: "overview", label: "Overview", icon: BarChart3 },
+            { id: "traffic", label: "Traffic & Peak Hours", icon: Clock },
+            { id: "surprise", label: "Surprise Me Funnel", icon: Dice },
+            { id: "stream", label: `Live Search Log (${allRecentSearches.length})`, icon: Activity },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeSegment === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveSegment(tab.id)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: isActive ? "var(--sn-paper-card)" : "transparent",
+                  color: isActive ? "var(--sn-ink)" : "var(--sn-text-sub)",
+                  fontSize: "0.8rem",
+                  fontWeight: isActive ? 600 : 500,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: isActive ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+                  transition: "all 0.12s ease",
+                }}
+              >
+                <Icon size={14} strokeWidth={1.75} style={{ color: isActive ? "var(--sn-gold)" : "currentColor" }} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── LOADING SKELETON ─────────────────────────────────────────────────── */}
+      {loading && !analyticsData && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+            padding: "60px 20px",
+            background: "var(--sn-paper-card)",
+            borderRadius: "12px",
+            border: "1px solid var(--sn-paper-line)",
+            color: "var(--sn-text-sub)",
+          }}
+        >
+          <MiniSpinner size={26} />
+          <span style={{ fontSize: "0.88rem", fontWeight: 500, color: "var(--sn-ink)" }}>
+            Loading analytics data...
+          </span>
+        </div>
+      )}
+
+      {/* ── TOP 4 KPI SCORECARDS (Always visible at top of Overview & Traffic) ── */}
+      {analyticsData && searchOverview && (activeSegment === "overview" || activeSegment === "traffic") && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "14px",
+          }}
+        >
+          {/* Total Searches */}
+          <KpiCard
+            icon={Search}
+            iconColor={PALETTE.gold}
+            label="Total Searches"
+            value={searchOverview.totalSearches.toLocaleString()}
+            subValue={`${searchOverview.mobileSearches.toLocaleString()} Mobile (${searchOverview.mobilePercent}%) · ${searchOverview.desktopSearches.toLocaleString()} Desktop`}
+          />
+
+          {/* Search Success Rate */}
+          <KpiCard
+            icon={Target}
+            iconColor={searchOverview.successRate >= 80 ? PALETTE.emerald : PALETTE.gold}
+            label="Search Success Rate"
+            value={`${searchOverview.successRate}%`}
+            subValue={`${searchOverview.resultFound.toLocaleString()} found · ${searchOverview.resultNotFound.toLocaleString()} not found`}
+          />
+
+          {/* Unique Users */}
+          <KpiCard
+            icon={Users}
+            iconColor={PALETTE.slate}
+            label="Unique Search Users"
+            value={searchOverview.uniqueUsers.toLocaleString()}
+            subValue={`${searchOverview.uniqueQueries.toLocaleString()} distinct search queries`}
+          />
+
+          {/* Surprise Conversion Rate */}
+          {surprise?.funnel && (
+            <KpiCard
+              icon={Dice}
+              iconColor={PALETTE.emerald}
+              label="Surprise Conversion Rate"
+              value={`${surprise.funnel.conversionRate}%`}
+              subValue={`${surprise.funnel.downloads.toLocaleString()} downloads from ${(
+                surprise.funnel.clicks + surprise.funnel.rerolls
+              ).toLocaleString()} interactions`}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          VIEW 1: OVERVIEW (Default focused view)
+          KPI Cards + Main Daily Trends + 2 Actionable Tables (8 rows capped)
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {analyticsData && activeSegment === "overview" && (
+        <>
+          {/* Main Daily Search Trends Area Chart */}
+          <SectionCard
+            title="Daily Search Trends"
+            icon={TrendingUp}
+            action={
+              <span style={{ fontSize: "0.75rem", color: "var(--sn-text-sub)" }}>
+                {dailyTrendData.length} days recorded
+              </span>
+            }
+          >
+            {dailyTrendData.length > 0 ? (
+              <div style={{ width: "100%", height: 260 }}>
+                <ResponsiveContainer>
+                  <AreaChart data={dailyTrendData} margin={{ top: 8, right: 10, left: -15, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={PALETTE.gold} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={PALETTE.gold} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gradSuccess" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={PALETTE.emerald} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={PALETTE.emerald} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gradNoResults" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={PALETTE.maroon} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={PALETTE.maroon} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--sn-paper-line)" opacity={0.6} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
+                      stroke="var(--sn-paper-line)"
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
+                      stroke="var(--sn-paper-line)"
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend
+                      verticalAlign="top"
+                      height={32}
+                      wrapperStyle={{ fontSize: "0.76rem", color: "var(--sn-text-sub)" }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="total"
+                      name="Total Searches"
+                      stroke={PALETTE.gold}
+                      strokeWidth={2}
+                      fill="url(#gradTotal)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="success"
+                      name="Successful"
+                      stroke={PALETTE.emerald}
+                      strokeWidth={1.8}
+                      fill="url(#gradSuccess)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="noResults"
+                      name="No Results"
+                      stroke={PALETTE.maroon}
+                      strokeWidth={1.8}
+                      fill="url(#gradNoResults)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div style={{ padding: "30px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.85rem" }}>
+                No search trend data for the selected date range.
+              </div>
+            )}
+          </SectionCard>
+
+          {/* 2-Column Actionable Tables (Demand Gap & Top Successful) */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "16px" }}>
+            {/* Table 1: Missing Novels (Demand Gap) */}
+            <SectionCard
+              title="Missing Novels (Demand Gap)"
+              icon={AlertCircle}
+              action={
+                topMissingQueries.length > 8 ? (
+                  <button
+                    type="button"
+                    onClick={() => setMissingLimit((prev) => (prev === 8 ? 50 : 8))}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--sn-gold)",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    {missingLimit === 8 ? `View All (${topMissingQueries.length})` : "Show Less"}
+                  </button>
+                ) : null
+              }
+            >
+              <div style={{ fontSize: "0.78rem", color: "var(--sn-text-sub)", marginBottom: "12px" }}>
+                Searches that returned 0 results. Add missing titles directly to your catalog.
+              </div>
+
+              {topMissingQueries.length > 0 ? (
+                <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
+                        <th style={tableHeaderStyle}>Novel Name</th>
+                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "80px" }}>Searches</th>
+                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "105px" }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topMissingQueries.slice(0, missingLimit).map((item, idx) => (
+                        <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                          <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontWeight: 500, fontSize: "0.78rem" }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ ...tableCellStyle, fontWeight: 500 }}>
+                            <div style={{ color: "var(--sn-ink)", lineHeight: 1.3 }}>{item.query}</div>
+                            {item.uniqueUsers && (
+                              <div style={{ fontSize: "0.72rem", color: "var(--sn-text-sub)" }}>
+                                {item.uniqueUsers} reader{item.uniqueUsers > 1 ? "s" : ""}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                            <span
+                              style={{
+                                background: "rgba(107, 29, 47, 0.08)",
+                                color: PALETTE.maroon,
+                                border: "1px solid rgba(107, 29, 47, 0.2)",
+                                padding: "2px 8px",
+                                borderRadius: "10px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {item.count}×
+                            </span>
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleAddToCatalog(item.query)}
+                              style={{
+                                padding: "4px 9px",
+                                borderRadius: "5px",
+                                border: "1px solid var(--sn-paper-line)",
+                                background: "var(--sn-paper)",
+                                color: "var(--sn-ink)",
+                                fontSize: "0.74rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                whiteSpace: "nowrap",
+                                transition: "all 0.12s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = "var(--sn-gold)";
+                                e.currentTarget.style.color = "var(--sn-gold)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = "var(--sn-paper-line)";
+                                e.currentTarget.style.color = "var(--sn-ink)";
+                              }}
+                              title={`Pre-fill "${item.query}" in Single Entry`}
+                            >
+                              <Plus size={12} strokeWidth={2} /> Add Novel
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ padding: "24px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
+                  No missing queries recorded for this period.
+                </div>
+              )}
+            </SectionCard>
+
+            {/* Table 2: Top Successful Searches */}
+            <SectionCard
+              title="Top Successful Searches"
+              icon={TrendingUp}
+              action={
+                topSuccessfulQueries.length > 8 ? (
+                  <button
+                    type="button"
+                    onClick={() => setSuccessfulLimit((prev) => (prev === 8 ? 50 : 8))}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--sn-gold)",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    {successfulLimit === 8 ? `View All (${topSuccessfulQueries.length})` : "Show Less"}
+                  </button>
+                ) : null
+              }
+            >
+              <div style={{ fontSize: "0.78rem", color: "var(--sn-text-sub)", marginBottom: "12px" }}>
+                Most popular queries that successfully matched novels in your catalog.
+              </div>
+
+              {topSuccessfulQueries.length > 0 ? (
+                <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
+                        <th style={tableHeaderStyle}>Novel Query</th>
+                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "70px" }}>Count</th>
+                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "70px" }}>Readers</th>
+                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "75px" }}>Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topSuccessfulQueries.slice(0, successfulLimit).map((item, idx) => (
+                        <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                          <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontWeight: 500, fontSize: "0.78rem" }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
+                            {item.query}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+                            {item.count}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center", fontVariantNumeric: "tabular-nums", color: "var(--sn-text-sub)" }}>
+                            {item.uniqueUsers || "—"}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                            <span
+                              style={{
+                                background: "rgba(45, 106, 79, 0.08)",
+                                color: PALETTE.emerald,
+                                padding: "2px 7px",
+                                borderRadius: "10px",
+                                fontSize: "0.74rem",
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {item.successRate ?? 100}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ padding: "24px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
+                  No successful search records found.
+                </div>
+              )}
+            </SectionCard>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          VIEW 2: TRAFFIC & PEAK HOURS
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {analyticsData && activeSegment === "traffic" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Peak Activity Hours (24h Distribution) */}
+          <SectionCard title="Peak Activity Hours (24-Hour Distribution UTC)" icon={Clock}>
+            <div style={{ fontSize: "0.78rem", color: "var(--sn-text-sub)", marginBottom: "14px" }}>
+              Reader traffic volume across all 24 hours of the day.
+            </div>
+
+            {hourlyData.length > 0 ? (
+              <div style={{ width: "100%", height: 260 }}>
+                <ResponsiveContainer>
+                  <BarChart data={hourlyData} margin={{ top: 8, right: 10, left: -15, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--sn-paper-line)" opacity={0.6} />
+                    <XAxis
+                      dataKey="hour"
+                      tick={{ fontSize: 10, fill: "var(--sn-text-sub)" }}
+                      stroke="var(--sn-paper-line)"
+                      interval={2}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
+                      stroke="var(--sn-paper-line)"
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="searches" name="Searches" radius={[4, 4, 0, 0]}>
+                      {hourlyData.map((entry, idx) => {
+                        const max = Math.max(...hourlyData.map((h) => h.searches));
+                        const ratio = max > 0 ? entry.searches / max : 0;
+                        return (
+                          <Cell
+                            key={idx}
+                            fill={
+                              ratio > 0.75
+                                ? PALETTE.gold
+                                : ratio > 0.4
+                                ? "rgba(197, 155, 39, 0.7)"
+                                : ratio > 0.2
+                                ? "rgba(197, 155, 39, 0.35)"
+                                : "var(--sn-paper-line)"
+                            }
+                          />
+                        );
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div style={{ padding: "30px", textAlign: "center", color: "var(--sn-text-sub)" }}>
+                No hourly distribution data available.
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Device Distribution Breakdown */}
+          {searchOverview && (
+            <SectionCard title="Device Distribution" icon={Smartphone}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", maxWidth: "600px" }}>
+                <div
+                  style={{
+                    padding: "14px 16px",
+                    background: "var(--sn-paper)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--sn-paper-line)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                  }}
+                >
+                  <Smartphone size={20} strokeWidth={1.75} style={{ color: PALETTE.gold }} />
+                  <div>
+                    <div style={{ fontSize: "0.76rem", color: "var(--sn-text-sub)" }}>Mobile Searches</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--sn-ink)" }}>
+                      {searchOverview.mobileSearches.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--sn-text-sub)" }}>
+                      {searchOverview.mobilePercent}% of total
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: "14px 16px",
+                    background: "var(--sn-paper)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--sn-paper-line)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                  }}
+                >
+                  <Monitor size={20} strokeWidth={1.75} style={{ color: PALETTE.slate }} />
+                  <div>
+                    <div style={{ fontSize: "0.76rem", color: "var(--sn-text-sub)" }}>Desktop Searches</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--sn-ink)" }}>
+                      {searchOverview.desktopSearches.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--sn-text-sub)" }}>
+                      {Math.round((100 - searchOverview.mobilePercent) * 100) / 100}% of total
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          VIEW 3: SURPRISE ME FUNNEL
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {analyticsData && activeSegment === "surprise" && surprise && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Funnel Chart & KPI Summary */}
+          <SectionCard title="Surprise Me Feature Funnel" icon={Dice}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", alignItems: "center" }}>
+              <div style={{ height: 220 }}>
+                <ResponsiveContainer>
+                  <BarChart data={funnelData} margin={{ top: 8, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--sn-paper-line)" opacity={0.6} />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
+                      stroke="var(--sn-paper-line)"
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
+                      stroke="var(--sn-paper-line)"
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" name="Interactions" radius={[4, 4, 0, 0]}>
+                      {funnelData.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Stats side column */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    background: "var(--sn-paper)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--sn-paper-line)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontSize: "0.8rem", color: "var(--sn-text-sub)" }}>Clicks</span>
+                  <strong style={{ fontSize: "0.95rem", color: "var(--sn-ink)" }}>
+                    {surprise.funnel.clicks.toLocaleString()}
+                  </strong>
+                </div>
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    background: "var(--sn-paper)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--sn-paper-line)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontSize: "0.8rem", color: "var(--sn-text-sub)" }}>Rerolls</span>
+                  <strong style={{ fontSize: "0.95rem", color: PALETTE.maroon }}>
+                    {surprise.funnel.rerolls.toLocaleString()}
+                  </strong>
+                </div>
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    background: "var(--sn-paper)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--sn-paper-line)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontSize: "0.8rem", color: "var(--sn-text-sub)" }}>Downloads</span>
+                  <strong style={{ fontSize: "0.95rem", color: PALETTE.emerald }}>
+                    {surprise.funnel.downloads.toLocaleString()}
+                  </strong>
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--sn-text-sub)", textAlign: "center", paddingTop: "4px" }}>
+                  Conversion Rate: <strong>{surprise.funnel.conversionRate}%</strong> · Reroll Rate:{" "}
+                  <strong>{surprise.funnel.rerollRate}%</strong>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* 2-Column Tables: Top Downloads & Top Rerolls */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "16px" }}>
+            {/* Top Surprise Downloads */}
+            <SectionCard title="Top Surprise Downloads" icon={Download}>
+              {topSurpriseDownloads.length > 0 ? (
+                <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
+                        <th style={tableHeaderStyle}>Novel Title</th>
+                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "100px" }}>Downloads</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topSurpriseDownloads.slice(0, 15).map((item, idx) => (
+                        <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                          <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontSize: "0.78rem" }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
+                            {item.title}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                            <span
+                              style={{
+                                background: "rgba(45, 106, 79, 0.08)",
+                                color: PALETTE.emerald,
+                                padding: "2px 8px",
+                                borderRadius: "10px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {item.downloads} downloads
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ padding: "24px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
+                  No surprise downloads recorded yet.
+                </div>
+              )}
+            </SectionCard>
+
+            {/* Top Rerolled Novels */}
+            <SectionCard title="Top Rerolled Novels" icon={RefreshCw}>
+              {topSurpriseRerolls.length > 0 ? (
+                <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
+                        <th style={tableHeaderStyle}>Novel Title</th>
+                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "100px" }}>Rerolls</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topSurpriseRerolls.slice(0, 15).map((item, idx) => (
+                        <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                          <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontSize: "0.78rem" }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
+                            {item.title}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                            <span
+                              style={{
+                                background: "rgba(107, 29, 47, 0.08)",
+                                color: PALETTE.maroon,
+                                padding: "2px 8px",
+                                borderRadius: "10px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {item.rerolls} rerolls
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ padding: "24px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
+                  No reroll records yet.
+                </div>
+              )}
+            </SectionCard>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          VIEW 4: LIVE SEARCH LOG (Clean 20-row pagination)
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {analyticsData && activeSegment === "stream" && (
+        <SectionCard
+          title="Live Search Activity Stream"
+          icon={Activity}
+          action={
+            <span style={{ fontSize: "0.75rem", color: "var(--sn-text-sub)" }}>
+              {filteredRecentSearches.length} matching events
+            </span>
+          }
+        >
+          {/* Controls toolbar: Query search & status filter */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "8px",
+              marginBottom: "12px",
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Search by query or User ID..."
+              value={streamSearch}
+              onChange={(e) => {
+                setStreamSearch(e.target.value);
+                setStreamPage(1);
+              }}
+              className="admin-input"
+              style={{
+                ...compactInputStyle,
+                width: "100%",
+                maxWidth: "280px",
+              }}
+            />
+
+            <div
+              style={{
+                display: "inline-flex",
+                background: "var(--sn-paper)",
+                border: "1px solid var(--sn-paper-line)",
+                borderRadius: "6px",
+                padding: "2px",
+                gap: "2px",
+              }}
+            >
+              {[
+                { id: "all", label: "All" },
+                { id: "found", label: "Found Only" },
+                { id: "notFound", label: "No Result Only" },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => {
+                    setStreamFilter(f.id);
+                    setStreamPage(1);
+                  }}
+                  style={{
+                    padding: "4px 9px",
+                    borderRadius: "4px",
+                    border: "none",
+                    background: streamFilter === f.id ? "var(--sn-paper-card)" : "transparent",
+                    color: streamFilter === f.id ? "var(--sn-ink)" : "var(--sn-text-sub)",
+                    fontSize: "0.74rem",
+                    fontWeight: streamFilter === f.id ? 600 : 500,
+                    cursor: "pointer",
+                    boxShadow: streamFilter === f.id ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Activity Table */}
+          {filteredRecentSearches.length > 0 ? (
+            <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...tableHeaderStyle, width: "130px" }}>Timestamp</th>
+                    <th style={{ ...tableHeaderStyle, width: "120px" }}>User ID</th>
+                    <th style={tableHeaderStyle}>Query</th>
+                    <th style={{ ...tableHeaderStyle, width: "95px", textAlign: "center" }}>Device</th>
+                    <th style={{ ...tableHeaderStyle, width: "110px", textAlign: "center" }}>Status</th>
+                    <th style={{ ...tableHeaderStyle, width: "90px", textAlign: "center" }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedRecentSearches.map((item, idx) => {
+                    const isFound = item.resultFound === "Yes";
+                    const formattedDate = item.timestamp
+                      ? new Date(item.timestamp).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "—";
+
+                    return (
+                      <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                        <td
+                          style={{
+                            ...tableCellStyle,
+                            fontSize: "0.76rem",
+                            color: "var(--sn-text-sub)",
+                            fontVariantNumeric: "tabular-nums",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={item.timestamp}
+                        >
+                          {formattedDate}
+                        </td>
+                        <td style={{ ...tableCellStyle, fontSize: "0.74rem", fontFamily: "monospace" }}>
+                          <span
+                            style={{
+                              background: "var(--sn-paper)",
+                              border: "1px solid var(--sn-paper-line)",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              color: "var(--sn-text-sub)",
+                            }}
+                            title={item.userId}
+                          >
+                            {item.userId?.length > 13 ? `${item.userId.slice(0, 12)}…` : item.userId || "anon"}
+                          </span>
+                        </td>
+                        <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
+                          {item.query || item.search}
+                        </td>
+                        <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              fontSize: "0.75rem",
+                              color: "var(--sn-text-sub)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {item.device === "Mobile" ? (
+                              <>
+                                <Smartphone size={12} strokeWidth={1.75} style={{ color: PALETTE.gold }} /> Mobile
+                              </>
+                            ) : item.device === "Desktop" ? (
+                              <>
+                                <Monitor size={12} strokeWidth={1.75} style={{ color: PALETTE.slate }} /> Desktop
+                              </>
+                            ) : (
+                              item.device || "Unknown"
+                            )}
+                          </span>
+                        </td>
+                        <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                          <span
+                            style={{
+                              background: isFound ? "rgba(45, 106, 79, 0.08)" : "rgba(107, 29, 47, 0.08)",
+                              color: isFound ? PALETTE.emerald : PALETTE.maroon,
+                              border: `1px solid ${isFound ? "rgba(45, 106, 79, 0.2)" : "rgba(107, 29, 47, 0.2)"}`,
+                              padding: "2px 7px",
+                              borderRadius: "10px",
+                              fontSize: "0.73rem",
+                              fontWeight: 600,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {isFound ? (
+                              <>
+                                <CheckCircle size={11} strokeWidth={2} /> Found
+                              </>
+                            ) : (
+                              <>
+                                <XCircle size={11} strokeWidth={2} /> No Result
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                          {!isFound && (
+                            <button
+                              type="button"
+                              onClick={() => handleAddToCatalog(item.query || item.search)}
+                              style={{
+                                padding: "3px 8px",
+                                borderRadius: "4px",
+                                border: "1px solid var(--sn-paper-line)",
+                                background: "var(--sn-paper)",
+                                color: "var(--sn-ink)",
+                                fontSize: "0.72rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "3px",
+                                whiteSpace: "nowrap",
+                              }}
+                              title={`Add "${item.query || item.search}" to catalog`}
+                            >
+                              <Plus size={10} strokeWidth={2} /> Add
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ padding: "30px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
+              No search logs match the current filter.
+            </div>
+          )}
+
+          {/* Clean Pagination */}
+          {totalStreamPages > 1 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: "12px",
+                fontSize: "0.76rem",
+                color: "var(--sn-text-sub)",
+              }}
+            >
+              <span>
+                Page {streamPage} of {totalStreamPages} ({filteredRecentSearches.length} total entries)
+              </span>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <button
+                  type="button"
+                  disabled={streamPage <= 1}
+                  onClick={() => setStreamPage((p) => Math.max(1, p - 1))}
+                  style={{
+                    padding: "4px 9px",
+                    borderRadius: "5px",
+                    border: "1px solid var(--sn-paper-line)",
+                    background: "var(--sn-paper)",
+                    color: streamPage <= 1 ? "var(--sn-text-sub)" : "var(--sn-ink)",
+                    cursor: streamPage <= 1 ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "3px",
+                    fontSize: "0.74rem",
+                  }}
+                >
+                  <ChevronLeft size={13} strokeWidth={1.75} /> Prev
+                </button>
+                <button
+                  type="button"
+                  disabled={streamPage >= totalStreamPages}
+                  onClick={() => setStreamPage((p) => Math.min(totalStreamPages, p + 1))}
+                  style={{
+                    padding: "4px 9px",
+                    borderRadius: "5px",
+                    border: "1px solid var(--sn-paper-line)",
+                    background: "var(--sn-paper)",
+                    color: streamPage >= totalStreamPages ? "var(--sn-text-sub)" : "var(--sn-ink)",
+                    cursor: streamPage >= totalStreamPages ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "3px",
+                    fontSize: "0.74rem",
+                  }}
+                >
+                  Next <ChevronRight size={13} strokeWidth={1.75} />
+                </button>
+              </div>
+            </div>
+          )}
+        </SectionCard>
+      )}
+
+      {/* ── 5. SUBTLE BORDERLESS FOOTER CAPTION ───────────────────────────────── */}
+      {analyticsData && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "6px 4px",
+            fontSize: "0.74rem",
+            color: "var(--sn-text-sub)",
+            flexWrap: "wrap",
+            gap: "8px",
+          }}
+        >
+          <div>
+            Source Data: {analyticsData.rawCounts?.totalSearchRows?.toLocaleString()} search rows ·{" "}
+            {analyticsData.rawCounts?.totalSurpriseRows?.toLocaleString()} surprise rows
+          </div>
+          <div>
+            {analyticsData.cached ? "Cache Active" : "Live Data"}
+            {analyticsData.filters?.startDate && ` · From ${analyticsData.filters.startDate.slice(0, 10)}`}
+            {analyticsData.filters?.endDate && ` · To ${analyticsData.filters.endDate.slice(0, 10)}`}
+            {analyticsData.filters?.device && ` · ${analyticsData.filters.device}`}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
