@@ -62,7 +62,7 @@ const MONTH_NAMES_SHORT = [
 ];
 
 /**
- * Parses date strings in formats: "YYYY-MM-DD", "YYYY/MM/DD", "MM-DD", "MM/DD", or "DD-MM-YYYY".
+ * Parses date strings in formats: "YYYY-MM-DD", "YYYY-MM", "YYYY/MM/DD", "MM-DD", "MM/DD", or "DD-MM-YYYY".
  * Uses manual string regex parsing to prevent any UTC vs local timezone shifts.
  */
 function parseDateParts(dateVal) {
@@ -80,7 +80,17 @@ function parseDateParts(dateVal) {
     }
   }
 
-  // 2. "MM-DD" or "MM/DD"
+  // 2. "YYYY-MM" (Month grouping key)
+  const ymMatch = str.match(/^(\d{4})[-/](\d{1,2})$/);
+  if (ymMatch) {
+    const year = parseInt(ymMatch[1], 10);
+    const month = parseInt(ymMatch[2], 10);
+    if (month >= 1 && month <= 12) {
+      return { year, month, day: null, monthName: MONTH_NAMES_SHORT[month - 1] };
+    }
+  }
+
+  // 3. "MM-DD" or "MM/DD"
   const mdMatch = str.match(/^(\d{1,2})[-/](\d{1,2})$/);
   if (mdMatch) {
     const month = parseInt(mdMatch[1], 10);
@@ -95,7 +105,7 @@ function parseDateParts(dateVal) {
     }
   }
 
-  // 3. "DD-MM-YYYY" or "DD/MM/YYYY"
+  // 4. "DD-MM-YYYY" or "DD/MM/YYYY"
   const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
   if (dmyMatch) {
     const day = parseInt(dmyMatch[1], 10);
@@ -110,11 +120,63 @@ function parseDateParts(dateVal) {
 }
 
 /**
- * Converts "YYYY-MM-DD" or "MM-DD" into readable short date label like "11 Oct", "12 Oct".
+ * Helper to get ISO week (Monday-Sunday) range and formatted labels for a date string.
+ */
+function getWeekRange(dateStr) {
+  const parts = parseDateParts(dateStr);
+  if (!parts || !parts.day) return null;
+  const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  const dayOfWeek = d.getUTCDay(); // 0 is Sunday, 1 is Monday...
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(d);
+  monday.setUTCDate(d.getUTCDate() + diffToMonday);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+
+  const startParts = {
+    year: monday.getUTCFullYear(),
+    month: monday.getUTCMonth() + 1,
+    day: monday.getUTCDate(),
+    monthName: MONTH_NAMES_SHORT[monday.getUTCMonth()],
+  };
+  const endParts = {
+    year: sunday.getUTCFullYear(),
+    month: sunday.getUTCMonth() + 1,
+    day: sunday.getUTCDate(),
+    monthName: MONTH_NAMES_SHORT[sunday.getUTCMonth()],
+  };
+
+  const weekKey = `${startParts.year}-${String(startParts.month).padStart(2, "0")}-${String(startParts.day).padStart(2, "0")}`;
+  const tickLabel = `${startParts.day} ${startParts.monthName}`;
+  const tooltipLabel =
+    startParts.year === endParts.year
+      ? `Week of ${startParts.day} ${startParts.monthName} – ${endParts.day} ${endParts.monthName} ${endParts.year}`
+      : `Week of ${startParts.day} ${startParts.monthName} ${startParts.year} – ${endParts.day} ${endParts.monthName} ${endParts.year}`;
+
+  return { weekKey, tickLabel, tooltipLabel, startParts, endParts };
+}
+
+/**
+ * Helper to get Month range key and formatted labels for a date string.
+ */
+function getMonthRange(dateStr) {
+  const parts = parseDateParts(dateStr);
+  if (!parts) return null;
+  const monthKey = `${parts.year}-${String(parts.month).padStart(2, "0")}`;
+  const tickLabel = `${parts.monthName} ${parts.year}`;
+  const tooltipLabel = `${parts.monthName} ${parts.year}`;
+  return { monthKey, tickLabel, tooltipLabel, parts };
+}
+
+/**
+ * Converts "YYYY-MM-DD", "YYYY-MM", or "MM-DD" into readable short date label like "11 Oct" or "Oct 2026".
  */
 function formatDateTick(val) {
   const parts = parseDateParts(val);
   if (!parts) return val;
+  if (!parts.day) {
+    return `${parts.monthName} ${parts.year}`;
+  }
   return `${parts.day} ${parts.monthName}`;
 }
 
@@ -122,9 +184,15 @@ function formatDateTick(val) {
  * Formats hovered chart date clearly into full readable date, e.g. "12 Oct 2026".
  */
 function formatTooltipDate(val, payload) {
+  if (payload?.[0]?.payload?.tooltipLabel) {
+    return payload[0].payload.tooltipLabel;
+  }
   const rawDate = payload?.[0]?.payload?.fullDate || payload?.[0]?.payload?.date || val;
   const parts = parseDateParts(rawDate);
   if (parts) {
+    if (!parts.day) {
+      return `${parts.monthName} ${parts.year}`;
+    }
     return `${parts.day} ${parts.monthName} ${parts.year}`;
   }
   return val;
@@ -133,9 +201,8 @@ function formatTooltipDate(val, payload) {
 // ── Recharts Custom Tooltip ──────────────────────────────────────────────────
 function CustomTooltip({ active, payload, label, labelFormatter }) {
   if (!active || !payload?.length) return null;
-  const displayLabel = labelFormatter
-    ? labelFormatter(label, payload)
-    : formatTooltipDate(label, payload);
+  const displayLabel = payload[0]?.payload?.tooltipLabel
+    || (labelFormatter ? labelFormatter(label, payload) : formatTooltipDate(label, payload));
 
   return (
     <div
@@ -288,6 +355,9 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
   const [device, setDevice] = useState("");
   const [activePreset, setActivePreset] = useState("all");
 
+  // Chart Granularity: 'auto' | 'day' | 'week' | 'month'
+  const [granularityMode, setGranularityMode] = useState("auto");
+
   // Sub-Navigation Segment: 'overview' | 'traffic' | 'surprise' | 'stream'
   const [activeSegment, setActiveSegment] = useState("overview");
 
@@ -304,6 +374,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
   // ── Date Presets ───────────────────────────────────────────────────────────
   const applyPreset = (preset) => {
     setActivePreset(preset);
+    setGranularityMode("auto"); // Auto-select granularity when preset changes
     const now = new Date();
     if (preset === "all") {
       setStartDate("");
@@ -384,6 +455,100 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
       noResults: d.noResults ?? d.notFound,
     }));
   }, [searchTrends?.daily]);
+
+  // Total span of days in current dataset
+  const totalDays = useMemo(() => {
+    if (!dailyTrendData.length) return 0;
+    const dFirst = parseDateParts(dailyTrendData[0].date);
+    const dLast = parseDateParts(dailyTrendData[dailyTrendData.length - 1].date);
+    if (dFirst && dLast && dFirst.day && dLast.day) {
+      const t1 = Date.UTC(dFirst.year, dFirst.month - 1, dFirst.day);
+      const t2 = Date.UTC(dLast.year, dLast.month - 1, dLast.day);
+      const diffDays = Math.round((t2 - t1) / (1000 * 60 * 60 * 24)) + 1;
+      return Math.max(dailyTrendData.length, diffDays);
+    }
+    return dailyTrendData.length;
+  }, [dailyTrendData]);
+
+  // Smart Auto-Granularity based on span:
+  // <= 45 days: Day | 46 to 180 days: Week | > 180 days: Month
+  const autoGranularity = useMemo(() => {
+    if (totalDays <= 45) return "day";
+    if (totalDays <= 180) return "week";
+    return "month";
+  }, [totalDays]);
+
+  const activeGranularity = granularityMode === "auto" ? autoGranularity : granularityMode;
+
+  // Aggregated data series according to activeGranularity (Day | Week | Month)
+  const chartTrendData = useMemo(() => {
+    if (!dailyTrendData || dailyTrendData.length === 0) return [];
+
+    if (activeGranularity === "day") {
+      return dailyTrendData.map((d) => {
+        const parts = parseDateParts(d.date);
+        return {
+          date: d.date,
+          fullDate: d.fullDate || d.date,
+          tickLabel: parts?.day ? `${parts.day} ${parts.monthName}` : d.date,
+          tooltipLabel: parts?.day ? `${parts.day} ${parts.monthName} ${parts.year}` : d.date,
+          total: d.total,
+          success: d.success,
+          noResults: d.noResults,
+        };
+      });
+    }
+
+    if (activeGranularity === "week") {
+      const weekMap = new Map();
+      for (const d of dailyTrendData) {
+        const w = getWeekRange(d.date);
+        if (!w) continue;
+        if (!weekMap.has(w.weekKey)) {
+          weekMap.set(w.weekKey, {
+            date: w.weekKey,
+            fullDate: w.weekKey,
+            tickLabel: w.tickLabel,
+            tooltipLabel: w.tooltipLabel,
+            total: 0,
+            success: 0,
+            noResults: 0,
+          });
+        }
+        const item = weekMap.get(w.weekKey);
+        item.total += d.total || 0;
+        item.success += d.success || 0;
+        item.noResults += d.noResults || 0;
+      }
+      return Array.from(weekMap.values());
+    }
+
+    if (activeGranularity === "month") {
+      const monthMap = new Map();
+      for (const d of dailyTrendData) {
+        const m = getMonthRange(d.date);
+        if (!m) continue;
+        if (!monthMap.has(m.monthKey)) {
+          monthMap.set(m.monthKey, {
+            date: m.monthKey,
+            fullDate: m.monthKey,
+            tickLabel: m.tickLabel,
+            tooltipLabel: m.tooltipLabel,
+            total: 0,
+            success: 0,
+            noResults: 0,
+          });
+        }
+        const item = monthMap.get(m.monthKey);
+        item.total += d.total || 0;
+        item.success += d.success || 0;
+        item.noResults += d.noResults || 0;
+      }
+      return Array.from(monthMap.values());
+    }
+
+    return dailyTrendData;
+  }, [dailyTrendData, activeGranularity]);
 
   // Hourly Distribution for Bar Chart
   const hourlyData = useMemo(() => {
@@ -879,20 +1044,81 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
       ═══════════════════════════════════════════════════════════════════════ */}
       {analyticsData && activeSegment === "overview" && (
         <>
-          {/* Main Daily Search Trends Area Chart */}
+          {/* Main Search Trends Area Chart with Auto-Granularity */}
           <SectionCard
-            title="Daily Search Trends"
+            title={
+              activeGranularity === "month"
+                ? "Monthly Search Trends"
+                : activeGranularity === "week"
+                ? "Weekly Search Trends"
+                : "Daily Search Trends"
+            }
             icon={TrendingUp}
             action={
-              <span style={{ fontSize: "0.75rem", color: "var(--sn-text-sub)" }}>
-                {dailyTrendData.length} days recorded
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--sn-text-sub)", whiteSpace: "nowrap" }}>
+                  {dailyTrendData.length} days recorded
+                  {chartTrendData.length !== dailyTrendData.length && (
+                    <span style={{ opacity: 0.8 }}> ({chartTrendData.length} {activeGranularity}s)</span>
+                  )}
+                </span>
+
+                {/* Granularity Switcher: Auto | Day | Week | Month */}
+                <div
+                  style={{
+                    display: "inline-flex",
+                    background: "var(--sn-paper)",
+                    border: "1px solid var(--sn-paper-line)",
+                    borderRadius: "6px",
+                    padding: "2px",
+                    gap: "2px",
+                  }}
+                  role="group"
+                  aria-label="Chart Granularity"
+                >
+                  {[
+                    {
+                      id: "auto",
+                      label:
+                        granularityMode === "auto"
+                          ? `Auto (${activeGranularity.charAt(0).toUpperCase() + activeGranularity.slice(1)})`
+                          : "Auto",
+                    },
+                    { id: "day", label: "Day" },
+                    { id: "week", label: "Week" },
+                    { id: "month", label: "Month" },
+                  ].map((g) => {
+                    const isSelected = granularityMode === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setGranularityMode(g.id)}
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          border: "none",
+                          background: isSelected ? "var(--sn-paper-card)" : "transparent",
+                          color: isSelected ? "var(--sn-ink)" : "var(--sn-text-sub)",
+                          fontSize: "0.72rem",
+                          fontWeight: isSelected ? 600 : 500,
+                          cursor: "pointer",
+                          boxShadow: isSelected ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                          transition: "all 0.12s ease",
+                        }}
+                      >
+                        {g.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             }
           >
-            {dailyTrendData.length > 0 ? (
+            {chartTrendData.length > 0 ? (
               <div style={{ width: "100%", height: 280 }}>
                 <ResponsiveContainer>
-                  <AreaChart data={dailyTrendData} margin={{ top: 8, right: 10, left: -15, bottom: 8 }}>
+                  <AreaChart data={chartTrendData} margin={{ top: 8, right: 10, left: -15, bottom: 8 }}>
                     <defs>
                       <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={PALETTE.gold} stopOpacity={0.25} />
@@ -911,7 +1137,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                     <XAxis
                       dataKey="date"
                       tickFormatter={formatDateTick}
-                      interval={dailyTrendData.length <= 40 ? 0 : "preserveStartEnd"}
+                      interval={chartTrendData.length <= 40 ? 0 : "preserveStartEnd"}
+                      minTickGap={chartTrendData.length <= 40 ? 0 : 28}
                       angle={-35}
                       textAnchor="end"
                       height={48}
@@ -935,7 +1162,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       stroke={PALETTE.gold}
                       strokeWidth={2}
                       fill="url(#gradTotal)"
-                      dot={{ r: 3 }}
+                      dot={chartTrendData.length <= 40 ? { r: 3 } : false}
                       activeDot={{ r: 5 }}
                     />
                     <Area
@@ -945,7 +1172,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       stroke={PALETTE.emerald}
                       strokeWidth={1.8}
                       fill="url(#gradSuccess)"
-                      dot={{ r: 3 }}
+                      dot={chartTrendData.length <= 40 ? { r: 3 } : false}
                       activeDot={{ r: 5 }}
                     />
                     <Area
@@ -955,7 +1182,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       stroke={PALETTE.maroon}
                       strokeWidth={1.8}
                       fill="url(#gradNoResults)"
-                      dot={{ r: 3 }}
+                      dot={chartTrendData.length <= 40 ? { r: 3 } : false}
                       activeDot={{ r: 5 }}
                     />
                   </AreaChart>
