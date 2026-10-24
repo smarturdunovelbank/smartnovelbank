@@ -1695,3 +1695,219 @@ a.whatsapp-channel-btn {
 .recharts-surface:focus {
     outline: none !important;
 }
+
+/* ── Universal Smooth Touch Scrollbar Hide ── */
+.sn-touch-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.sn-touch-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+/* ── Admin Responsive Table to Mobile Card System ── */
+.admin-desktop-table {
+    display: block;
+}
+.admin-mobile-cards {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .admin-desktop-table {
+        display: none !important;
+    }
+    .admin-mobile-cards {
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+    }
+}
+
+/* ── Admin KPI Scorecards Mobile 2x2 Grid ── */
+.admin-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+}
+@media (max-width: 640px) {
+    .admin-kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+    .admin-kpi-card {
+        padding: 12px 14px !important;
+    }
+    .admin-kpi-card-value {
+        font-size: 1.35rem !important;
+    }
+}
+
+/* ── Analytics Subnav Responsive Grid ── */
+.analytics-subnav-container {
+    display: inline-flex;
+    background: var(--sn-paper);
+    border: 1px solid var(--sn-paper-line);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+}
+@media (max-width: 640px) {
+    .analytics-subnav-container {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        width: 100% !important;
+    }
+    .analytics-subnav-btn {
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 8px 10px !important;
+    }
+}
+
+/* ── Admin Header Mobile Breakpoint ── */
+.admin-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--sn-paper-line);
+}
+@media (max-width: 768px) {
+    .admin-header-row {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 10px;
+    }
+    .admin-header-row-1 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+    .admin-header-row-2 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 8px;
+    }
+}
+
+/* ── Admin Filter Toolbar Mobile ── */
+.admin-analytics-toolbar {
+    background: var(--sn-paper-card);
+    border: 1px solid var(--sn-paper-line);
+    border-radius: 12px;
+    padding: 10px 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+@media (max-width: 768px) {
+    .admin-analytics-toolbar {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 10px;
+        padding: 12px;
+    }
+    .admin-analytics-toolbar-filters {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+    .admin-analytics-row-1 {
+        display: flex !important;
+        width: 100% !important;
+    }
+    .admin-analytics-row-1 > div {
+        display: flex !important;
+        width: 100% !important;
+    }
+    .admin-analytics-row-1 button {
+        flex: 1 !important;
+        text-align: center !important;
+        justify-content: center !important;
+        padding: 7px 4px !important;
+    }
+    .admin-analytics-row-2 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    .admin-analytics-row-2 input[type="date"] {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .admin-analytics-row-3 {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    .admin-analytics-row-3 select {
+        flex: 1 !important;
+    }
+    .admin-date-icon,
+    .admin-date-sep {
+        display: none !important;
+    }
+}
+
+/* ── Admin Modal Mobile Bottom-Sheet ── */
+.admin-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    animation: admin-fadeIn 0.15s ease-out;
+}
+.admin-modal-card {
+    background: var(--sn-paper);
+    border: 1px solid var(--sn-paper-line);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+}
+@media (max-width: 768px) {
+    .admin-modal-overlay {
+        padding: 0 !important;
+        align-items: flex-end !important;
+    }
+    .admin-modal-card {
+        max-width: 100% !important;
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        max-height: 92vh !important;
+    }
+    .admin-modal-title-row {
+        grid-template-columns: 1fr !important;
+    }
+}
+

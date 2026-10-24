@@ -233,6 +233,7 @@ function CustomTooltip({ active, payload, label, labelFormatter }) {
 function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
   return (
     <div
+      className="admin-kpi-card"
       style={{
         background: "var(--sn-paper-card)",
         border: "1px solid var(--sn-paper-line)",
@@ -264,6 +265,7 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
       </div>
 
       <div
+        className="admin-kpi-card-value"
         style={{
           fontSize: "1.75rem",
           fontWeight: 700,
@@ -756,6 +758,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
 
       {/* ── 1. COMPACT SINGLE-ROW FILTER TOOLBAR ─────────────────────────────── */}
       <div
+        className="admin-analytics-toolbar"
         style={{
           background: "var(--sn-paper-card)",
           border: "1px solid var(--sn-paper-line)",
@@ -770,49 +773,53 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
         }}
       >
         {/* Left Side: Presets, Date inputs, Device dropdown, Apply */}
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
-          {/* Segmented Preset Pills */}
-          <div
-            style={{
-              display: "inline-flex",
-              background: "var(--sn-paper)",
-              border: "1px solid var(--sn-paper-line)",
-              borderRadius: "7px",
-              padding: "2px",
-              gap: "2px",
-            }}
-          >
-            {[
-              { id: "all", label: "All Time" },
-              { id: "today", label: "Today" },
-              { id: "7days", label: "7D" },
-              { id: "30days", label: "30D" },
-            ].map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => applyPreset(p.id)}
-                style={{
-                  padding: "4px 9px",
-                  borderRadius: "5px",
-                  border: "none",
-                  background: activePreset === p.id ? "var(--sn-paper-card)" : "transparent",
-                  color: activePreset === p.id ? "var(--sn-ink)" : "var(--sn-text-sub)",
-                  fontSize: "0.76rem",
-                  fontWeight: activePreset === p.id ? 600 : 500,
-                  cursor: "pointer",
-                  boxShadow: activePreset === p.id ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
-                  transition: "all 0.12s ease",
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
+        <div className="admin-analytics-toolbar-filters" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+          {/* Segmented Preset Pills (Row 1 on mobile) */}
+          <div className="admin-analytics-row-1" style={{ display: "inline-flex" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                background: "var(--sn-paper)",
+                border: "1px solid var(--sn-paper-line)",
+                borderRadius: "7px",
+                padding: "2px",
+                gap: "2px",
+                width: "100%",
+              }}
+            >
+              {[
+                { id: "all", label: "All Time" },
+                { id: "today", label: "Today" },
+                { id: "7days", label: "7D" },
+                { id: "30days", label: "30D" },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyPreset(p.id)}
+                  style={{
+                    padding: "4px 9px",
+                    borderRadius: "5px",
+                    border: "none",
+                    background: activePreset === p.id ? "var(--sn-paper-card)" : "transparent",
+                    color: activePreset === p.id ? "var(--sn-ink)" : "var(--sn-text-sub)",
+                    fontSize: "0.76rem",
+                    fontWeight: activePreset === p.id ? 600 : 500,
+                    cursor: "pointer",
+                    boxShadow: activePreset === p.id ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                    transition: "all 0.12s ease",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Compact Date Range Pickers */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
-            <Calendar size={13} strokeWidth={1.75} style={{ color: "var(--sn-text-sub)" }} />
+          {/* Compact Date Range Pickers (Row 2 on mobile) */}
+          <div className="admin-analytics-row-2" style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+            <Calendar size={13} strokeWidth={1.75} className="admin-date-icon" style={{ color: "var(--sn-text-sub)", flexShrink: 0 }} />
             <input
               type="date"
               value={startDate}
@@ -824,7 +831,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
               className="admin-input"
               title="Start date"
             />
-            <span style={{ color: "var(--sn-text-sub)", fontSize: "0.78rem" }}>–</span>
+            <span className="admin-date-sep" style={{ color: "var(--sn-text-sub)", fontSize: "0.78rem" }}>–</span>
             <input
               type="date"
               value={endDate}
@@ -838,86 +845,92 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
             />
           </div>
 
-          {/* Device dropdown (Clean text, no emojis) */}
-          <select
-            value={device}
-            onChange={(e) => setDevice(e.target.value)}
-            style={{ ...compactInputStyle, cursor: "pointer", minWidth: "105px" }}
-            className="admin-input"
-          >
-            <option value="">All Devices</option>
-            <option value="Mobile">Mobile</option>
-            <option value="Desktop">Desktop</option>
-          </select>
+          {/* Device dropdown + Apply + Refresh (Row 3 on mobile) */}
+          <div className="admin-analytics-row-3" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <select
+              value={device}
+              onChange={(e) => setDevice(e.target.value)}
+              style={{ ...compactInputStyle, cursor: "pointer", minWidth: "105px" }}
+              className="admin-input"
+            >
+              <option value="">All Devices</option>
+              <option value="Mobile">Mobile</option>
+              <option value="Desktop">Desktop</option>
+            </select>
 
-          {/* Apply Button */}
-          <button
-            type="button"
-            onClick={() => fetchAnalytics(false)}
-            disabled={loading}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "6px",
-              border: "1px solid var(--sn-paper-line)",
-              background: "var(--sn-paper)",
-              color: "var(--sn-ink)",
-              fontSize: "0.78rem",
-              fontWeight: 600,
-              cursor: loading ? "not-allowed" : "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "5px",
-              transition: "all 0.12s ease",
-            }}
-          >
-            <Search size={12} strokeWidth={1.75} /> Apply
-          </button>
+            {/* Apply Button */}
+            <button
+              type="button"
+              onClick={() => fetchAnalytics(false)}
+              disabled={loading}
+              style={{
+                padding: "6px 12px",
+                borderRadius: "6px",
+                border: "1px solid var(--sn-paper-line)",
+                background: "var(--sn-paper)",
+                color: "var(--sn-ink)",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                whiteSpace: "nowrap",
+                transition: "all 0.12s ease",
+              }}
+            >
+              <Search size={12} strokeWidth={1.75} /> Apply
+            </button>
+
+            {/* Refresh Button */}
+            <button
+              type="button"
+              onClick={() => fetchAnalytics(true)}
+              disabled={loading}
+              style={{
+                padding: "6px 12px",
+                borderRadius: "6px",
+                border: "1px solid var(--sn-paper-line)",
+                background: "transparent",
+                color: "var(--sn-text-main)",
+                fontSize: "0.78rem",
+                fontWeight: 500,
+                cursor: loading ? "not-allowed" : "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                whiteSpace: "nowrap",
+                transition: "all 0.12s ease",
+              }}
+              title="Refresh from Google Sheets"
+            >
+              <RefreshCw
+                size={12}
+                strokeWidth={1.75}
+                style={{
+                  animation: loading ? "admin-spin 0.85s linear infinite" : "none",
+                  color: "var(--sn-gold)",
+                }}
+              />
+              <span>{loading ? "Refreshing" : "Refresh"}</span>
+            </button>
+          </div>
         </div>
 
-        {/* Right Side: Subtle Cached timestamp + Refresh button */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {analyticsData?.cached && analyticsData.cachedAt && (
+        {/* Right Side: Subtle Cached timestamp */}
+        {analyticsData?.cached && analyticsData.cachedAt && (
+          <div style={{ display: "flex", alignItems: "center" }}>
             <span style={{ fontSize: "0.74rem", color: "var(--sn-text-sub)", whiteSpace: "nowrap" }}>
               Cached {new Date(analyticsData.cachedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
-          )}
-
-          <button
-            type="button"
-            onClick={() => fetchAnalytics(true)}
-            disabled={loading}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "6px",
-              border: "1px solid var(--sn-paper-line)",
-              background: "transparent",
-              color: "var(--sn-text-main)",
-              fontSize: "0.78rem",
-              fontWeight: 500,
-              cursor: loading ? "not-allowed" : "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              transition: "all 0.12s ease",
-            }}
-            title="Refresh from Google Sheets"
-          >
-            <RefreshCw
-              size={12}
-              strokeWidth={1.75}
-              style={{
-                animation: loading ? "admin-spin 0.85s linear infinite" : "none",
-                color: "var(--sn-gold)",
-              }}
-            />
-            <span>{loading ? "Refreshing" : "Refresh"}</span>
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* ── 2. SUB-NAVIGATION SEGMENTS ────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
         <div
+          className="analytics-subnav-container"
           style={{
             display: "inline-flex",
             background: "var(--sn-paper)",
@@ -940,6 +953,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveSegment(tab.id)}
+                className="analytics-subnav-btn"
                 style={{
                   padding: "6px 14px",
                   borderRadius: "6px",
@@ -954,10 +968,11 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                   gap: "6px",
                   boxShadow: isActive ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
                   transition: "all 0.12s ease",
+                  whiteSpace: "nowrap",
                 }}
               >
-                <Icon size={14} strokeWidth={1.75} style={{ color: isActive ? "var(--sn-gold)" : "currentColor" }} />
-                <span>{tab.label}</span>
+                <Icon size={14} strokeWidth={1.75} style={{ color: isActive ? "var(--sn-gold)" : "currentColor", flexShrink: 0 }} />
+                <span style={{ whiteSpace: "nowrap" }}>{tab.label}</span>
               </button>
             );
           })}
@@ -990,6 +1005,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
       {/* ── TOP 4 KPI SCORECARDS (Always visible at top of Overview & Traffic) ── */}
       {analyticsData && searchOverview && (activeSegment === "overview" || activeSegment === "traffic") && (
         <div
+          className="admin-kpi-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -1118,7 +1134,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
             {chartTrendData.length > 0 ? (
               <div style={{ width: "100%", height: 280 }}>
                 <ResponsiveContainer>
-                  <AreaChart data={chartTrendData} margin={{ top: 8, right: 10, left: -15, bottom: 8 }}>
+                  <AreaChart data={chartTrendData} margin={{ top: 16, right: 8, left: -12, bottom: 8 }}>
                     <defs>
                       <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={PALETTE.gold} stopOpacity={0.25} />
@@ -1146,14 +1162,15 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       stroke="var(--sn-paper-line)"
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
+                      width={34}
+                      tick={{ fontSize: 10, fill: "var(--sn-text-sub)" }}
                       stroke="var(--sn-paper-line)"
                     />
                     <Tooltip content={<CustomTooltip labelFormatter={formatTooltipDate} />} />
                     <Legend
                       verticalAlign="top"
                       height={32}
-                      wrapperStyle={{ fontSize: "0.76rem", color: "var(--sn-text-sub)" }}
+                      wrapperStyle={{ paddingBottom: "12px", fontSize: "11px", color: "var(--sn-text-sub)" }}
                     />
                     <Area
                       type="monotone"
@@ -1226,83 +1243,157 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
               </div>
 
               {topMissingQueries.length > 0 ? (
-                <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
-                        <th style={tableHeaderStyle}>Novel Name</th>
-                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "80px" }}>Searches</th>
-                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "105px" }}>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topMissingQueries.slice(0, missingLimit).map((item, idx) => (
-                        <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
-                          <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontWeight: 500, fontSize: "0.78rem" }}>
-                            {idx + 1}
-                          </td>
-                          <td style={{ ...tableCellStyle, fontWeight: 500 }}>
-                            <div style={{ color: "var(--sn-ink)", lineHeight: 1.3 }}>{item.query}</div>
-                            {item.uniqueUsers && (
-                              <div style={{ fontSize: "0.72rem", color: "var(--sn-text-sub)" }}>
-                                {item.uniqueUsers} reader{item.uniqueUsers > 1 ? "s" : ""}
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
-                            <span
-                              style={{
-                                background: "rgba(107, 29, 47, 0.08)",
-                                color: PALETTE.maroon,
-                                border: "1px solid rgba(107, 29, 47, 0.2)",
-                                padding: "2px 8px",
-                                borderRadius: "10px",
-                                fontSize: "0.75rem",
-                                fontWeight: 600,
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {item.count}×
-                            </span>
-                          </td>
-                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
-                            <button
-                              type="button"
-                              onClick={() => handleAddToCatalog(item.query)}
-                              style={{
-                                padding: "4px 9px",
-                                borderRadius: "5px",
-                                border: "1px solid var(--sn-paper-line)",
-                                background: "var(--sn-paper)",
-                                color: "var(--sn-ink)",
-                                fontSize: "0.74rem",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                whiteSpace: "nowrap",
-                                transition: "all 0.12s ease",
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = "var(--sn-gold)";
-                                e.currentTarget.style.color = "var(--sn-gold)";
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = "var(--sn-paper-line)";
-                                e.currentTarget.style.color = "var(--sn-ink)";
-                              }}
-                              title={`Pre-fill "${item.query}" in Single Entry`}
-                            >
-                              <Plus size={12} strokeWidth={2} /> Add Novel
-                            </button>
-                          </td>
+                <>
+                  <div className="admin-desktop-table" style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
+                          <th style={tableHeaderStyle}>Novel Name</th>
+                          <th style={{ ...tableHeaderStyle, textAlign: "center", width: "80px" }}>Searches</th>
+                          <th style={{ ...tableHeaderStyle, textAlign: "center", width: "105px" }}>Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {topMissingQueries.slice(0, missingLimit).map((item, idx) => (
+                          <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                            <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontWeight: 500, fontSize: "0.78rem" }}>
+                              {idx + 1}
+                            </td>
+                            <td style={{ ...tableCellStyle, fontWeight: 500 }}>
+                              <div style={{ color: "var(--sn-ink)", lineHeight: 1.3 }}>{item.query}</div>
+                              {item.uniqueUsers && (
+                                <div style={{ fontSize: "0.72rem", color: "var(--sn-text-sub)" }}>
+                                  {item.uniqueUsers} reader{item.uniqueUsers > 1 ? "s" : ""}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                              <span
+                                style={{
+                                  background: "rgba(107, 29, 47, 0.08)",
+                                  color: PALETTE.maroon,
+                                  border: "1px solid rgba(107, 29, 47, 0.2)",
+                                  padding: "2px 8px",
+                                  borderRadius: "10px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {item.count}×
+                              </span>
+                            </td>
+                            <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                              <button
+                                type="button"
+                                onClick={() => handleAddToCatalog(item.query)}
+                                style={{
+                                  padding: "4px 9px",
+                                  borderRadius: "5px",
+                                  border: "1px solid var(--sn-paper-line)",
+                                  background: "var(--sn-paper)",
+                                  color: "var(--sn-ink)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  whiteSpace: "nowrap",
+                                  transition: "all 0.12s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.borderColor = "var(--sn-gold)";
+                                  e.currentTarget.style.color = "var(--sn-gold)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.borderColor = "var(--sn-paper-line)";
+                                  e.currentTarget.style.color = "var(--sn-ink)";
+                                }}
+                                title={`Pre-fill "${item.query}" in Single Entry`}
+                              >
+                                <Plus size={12} strokeWidth={2} /> Add Novel
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Stacked Action Cards */}
+                  <div className="admin-mobile-cards" style={{ display: "none", flexDirection: "column", gap: "8px" }}>
+                    {topMissingQueries.slice(0, missingLimit).map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: "var(--sn-paper)",
+                          border: "1px solid var(--sn-paper-line)",
+                          borderRadius: "10px",
+                          padding: "10px 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "10px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0, flex: 1 }}>
+                          <span
+                            style={{
+                              fontFamily: "monospace",
+                              fontSize: "0.76rem",
+                              color: "var(--sn-text-sub)",
+                              fontWeight: 600,
+                              width: "24px",
+                              flexShrink: 0,
+                            }}
+                          >
+                            #{idx + 1}
+                          </span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ color: "var(--sn-ink)", fontWeight: 600, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {item.query}
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "var(--sn-text-sub)", display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                              <span style={{ color: PALETTE.maroon, fontWeight: 600 }}>{item.count} search{item.count > 1 ? "es" : ""}</span>
+                              {item.uniqueUsers && (
+                                <>
+                                  <span>·</span>
+                                  <span>{item.uniqueUsers} reader{item.uniqueUsers > 1 ? "s" : ""}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCatalog(item.query)}
+                          style={{
+                            padding: "6px 11px",
+                            borderRadius: "6px",
+                            border: "1px solid var(--sn-gold)",
+                            background: "rgba(197, 155, 39, 0.08)",
+                            color: "var(--sn-gold)",
+                            fontSize: "0.74rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            flexShrink: 0,
+                            whiteSpace: "nowrap",
+                            minHeight: "34px",
+                          }}
+                          title={`Pre-fill "${item.query}" in Single Entry`}
+                        >
+                          <Plus size={12} strokeWidth={2} /> Add Novel
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div style={{ padding: "24px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
                   No missing queries recorded for this period.
@@ -1339,52 +1430,117 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
               </div>
 
               {topSuccessfulQueries.length > 0 ? (
-                <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
-                        <th style={tableHeaderStyle}>Novel Query</th>
-                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "70px" }}>Count</th>
-                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "70px" }}>Readers</th>
-                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "75px" }}>Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topSuccessfulQueries.slice(0, successfulLimit).map((item, idx) => (
-                        <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
-                          <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontWeight: 500, fontSize: "0.78rem" }}>
-                            {idx + 1}
-                          </td>
-                          <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
-                            {item.query}
-                          </td>
-                          <td style={{ ...tableCellStyle, textAlign: "center", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
-                            {item.count}
-                          </td>
-                          <td style={{ ...tableCellStyle, textAlign: "center", fontVariantNumeric: "tabular-nums", color: "var(--sn-text-sub)" }}>
-                            {item.uniqueUsers || "—"}
-                          </td>
-                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
-                            <span
-                              style={{
-                                background: "rgba(45, 106, 79, 0.08)",
-                                color: PALETTE.emerald,
-                                padding: "2px 7px",
-                                borderRadius: "10px",
-                                fontSize: "0.74rem",
-                                fontWeight: 600,
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {item.successRate ?? 100}%
-                            </span>
-                          </td>
+                <>
+                  <div className="admin-desktop-table" style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
+                          <th style={tableHeaderStyle}>Novel Query</th>
+                          <th style={{ ...tableHeaderStyle, textAlign: "center", width: "70px" }}>Count</th>
+                          <th style={{ ...tableHeaderStyle, textAlign: "center", width: "70px" }}>Readers</th>
+                          <th style={{ ...tableHeaderStyle, textAlign: "center", width: "75px" }}>Rate</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {topSuccessfulQueries.slice(0, successfulLimit).map((item, idx) => (
+                          <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                            <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontWeight: 500, fontSize: "0.78rem" }}>
+                              {idx + 1}
+                            </td>
+                            <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
+                              {item.query}
+                            </td>
+                            <td style={{ ...tableCellStyle, textAlign: "center", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+                              {item.count}
+                            </td>
+                            <td style={{ ...tableCellStyle, textAlign: "center", fontVariantNumeric: "tabular-nums", color: "var(--sn-text-sub)" }}>
+                              {item.uniqueUsers || "—"}
+                            </td>
+                            <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                              <span
+                                style={{
+                                  background: "rgba(45, 106, 79, 0.08)",
+                                  color: PALETTE.emerald,
+                                  padding: "2px 7px",
+                                  borderRadius: "10px",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 600,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {item.successRate ?? 100}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Stacked Action Cards */}
+                  <div className="admin-mobile-cards" style={{ display: "none", flexDirection: "column", gap: "8px" }}>
+                    {topSuccessfulQueries.slice(0, successfulLimit).map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: "var(--sn-paper)",
+                          border: "1px solid var(--sn-paper-line)",
+                          borderRadius: "10px",
+                          padding: "10px 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "10px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0, flex: 1 }}>
+                          <span
+                            style={{
+                              fontFamily: "monospace",
+                              fontSize: "0.76rem",
+                              color: "var(--sn-text-sub)",
+                              fontWeight: 600,
+                              width: "24px",
+                              flexShrink: 0,
+                            }}
+                          >
+                            #{idx + 1}
+                          </span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ color: "var(--sn-ink)", fontWeight: 600, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {item.query}
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "var(--sn-text-sub)", display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                              <span>{item.count} searches</span>
+                              {item.uniqueUsers && (
+                                <>
+                                  <span>·</span>
+                                  <span>{item.uniqueUsers} readers</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span
+                          style={{
+                            background: "rgba(45, 106, 79, 0.08)",
+                            color: PALETTE.emerald,
+                            padding: "3px 8px",
+                            borderRadius: "10px",
+                            fontSize: "0.74rem",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {item.successRate ?? 100}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div style={{ padding: "24px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
                   No successful search records found.
@@ -1409,7 +1565,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
             {hourlyData.length > 0 ? (
               <div style={{ width: "100%", height: 260 }}>
                 <ResponsiveContainer>
-                  <BarChart data={hourlyData} margin={{ top: 8, right: 10, left: -15, bottom: 0 }}>
+                  <BarChart data={hourlyData} margin={{ top: 16, right: 8, left: -12, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--sn-paper-line)" opacity={0.6} />
                     <XAxis
                       dataKey="hour"
@@ -1418,7 +1574,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       interval={2}
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
+                      width={34}
+                      tick={{ fontSize: 10, fill: "var(--sn-text-sub)" }}
                       stroke="var(--sn-paper-line)"
                     />
                     <Tooltip content={<CustomTooltip />} />
@@ -1517,7 +1674,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", alignItems: "center" }}>
               <div style={{ height: 220 }}>
                 <ResponsiveContainer>
-                  <BarChart data={funnelData} margin={{ top: 8, right: 10, left: -20, bottom: 0 }}>
+                  <BarChart data={funnelData} margin={{ top: 16, right: 8, left: -15, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--sn-paper-line)" opacity={0.6} />
                     <XAxis
                       dataKey="name"
@@ -1525,7 +1682,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       stroke="var(--sn-paper-line)"
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "var(--sn-text-sub)" }}
+                      width={34}
+                      tick={{ fontSize: 10, fill: "var(--sn-text-sub)" }}
                       stroke="var(--sn-paper-line)"
                     />
                     <Tooltip content={<CustomTooltip />} />
@@ -1597,48 +1755,92 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
           </SectionCard>
 
           {/* 2-Column Tables: Top Downloads & Top Rerolls */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: "16px" }}>
             {/* Top Surprise Downloads */}
             <SectionCard title="Top Surprise Downloads" icon={Download}>
               {topSurpriseDownloads.length > 0 ? (
-                <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
-                        <th style={tableHeaderStyle}>Novel Title</th>
-                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "100px" }}>Downloads</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topSurpriseDownloads.slice(0, 15).map((item, idx) => (
-                        <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
-                          <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontSize: "0.78rem" }}>
-                            {idx + 1}
-                          </td>
-                          <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
-                            {item.title}
-                          </td>
-                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
-                            <span
-                              style={{
-                                background: "rgba(45, 106, 79, 0.08)",
-                                color: PALETTE.emerald,
-                                padding: "2px 8px",
-                                borderRadius: "10px",
-                                fontSize: "0.75rem",
-                                fontWeight: 600,
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {item.downloads} downloads
-                            </span>
-                          </td>
+                <>
+                  <div className="admin-desktop-table" style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
+                          <th style={tableHeaderStyle}>Novel Title</th>
+                          <th style={{ ...tableHeaderStyle, textAlign: "center", width: "100px" }}>Downloads</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {topSurpriseDownloads.slice(0, 15).map((item, idx) => (
+                          <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                            <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontSize: "0.78rem" }}>
+                              {idx + 1}
+                            </td>
+                            <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
+                              {item.title}
+                            </td>
+                            <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                              <span
+                                style={{
+                                  background: "rgba(45, 106, 79, 0.08)",
+                                  color: PALETTE.emerald,
+                                  padding: "2px 8px",
+                                  borderRadius: "10px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {item.downloads} downloads
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Stacked Cards */}
+                  <div className="admin-mobile-cards" style={{ display: "none", flexDirection: "column", gap: "8px" }}>
+                    {topSurpriseDownloads.slice(0, 15).map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: "var(--sn-paper)",
+                          border: "1px solid var(--sn-paper-line)",
+                          borderRadius: "10px",
+                          padding: "10px 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "10px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0, flex: 1 }}>
+                          <span style={{ fontFamily: "monospace", fontSize: "0.76rem", color: "var(--sn-text-sub)", fontWeight: 600, width: "24px", flexShrink: 0 }}>
+                            #{idx + 1}
+                          </span>
+                          <span style={{ color: "var(--sn-ink)", fontWeight: 600, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {item.title}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            background: "rgba(45, 106, 79, 0.08)",
+                            color: PALETTE.emerald,
+                            padding: "3px 8px",
+                            borderRadius: "10px",
+                            fontSize: "0.74rem",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {item.downloads} dl
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div style={{ padding: "24px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
                   No surprise downloads recorded yet.
@@ -1649,44 +1851,88 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
             {/* Top Rerolled Novels */}
             <SectionCard title="Top Rerolled Novels" icon={RefreshCw}>
               {topSurpriseRerolls.length > 0 ? (
-                <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
-                        <th style={tableHeaderStyle}>Novel Title</th>
-                        <th style={{ ...tableHeaderStyle, textAlign: "center", width: "100px" }}>Rerolls</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topSurpriseRerolls.slice(0, 15).map((item, idx) => (
-                        <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
-                          <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontSize: "0.78rem" }}>
-                            {idx + 1}
-                          </td>
-                          <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
-                            {item.title}
-                          </td>
-                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
-                            <span
-                              style={{
-                                background: "rgba(107, 29, 47, 0.08)",
-                                color: PALETTE.maroon,
-                                padding: "2px 8px",
-                                borderRadius: "10px",
-                                fontSize: "0.75rem",
-                                fontWeight: 600,
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {item.rerolls} rerolls
-                            </span>
-                          </td>
+                <>
+                  <div className="admin-desktop-table" style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th style={{ ...tableHeaderStyle, width: "32px" }}>#</th>
+                          <th style={tableHeaderStyle}>Novel Title</th>
+                          <th style={{ ...tableHeaderStyle, textAlign: "center", width: "100px" }}>Rerolls</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {topSurpriseRerolls.slice(0, 15).map((item, idx) => (
+                          <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                            <td style={{ ...tableCellStyle, color: "var(--sn-text-sub)", fontSize: "0.78rem" }}>
+                              {idx + 1}
+                            </td>
+                            <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
+                              {item.title}
+                            </td>
+                            <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                              <span
+                                style={{
+                                  background: "rgba(107, 29, 47, 0.08)",
+                                  color: PALETTE.maroon,
+                                  padding: "2px 8px",
+                                  borderRadius: "10px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {item.rerolls} rerolls
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Stacked Cards */}
+                  <div className="admin-mobile-cards" style={{ display: "none", flexDirection: "column", gap: "8px" }}>
+                    {topSurpriseRerolls.slice(0, 15).map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: "var(--sn-paper)",
+                          border: "1px solid var(--sn-paper-line)",
+                          borderRadius: "10px",
+                          padding: "10px 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "10px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0, flex: 1 }}>
+                          <span style={{ fontFamily: "monospace", fontSize: "0.76rem", color: "var(--sn-text-sub)", fontWeight: 600, width: "24px", flexShrink: 0 }}>
+                            #{idx + 1}
+                          </span>
+                          <span style={{ color: "var(--sn-ink)", fontWeight: 600, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {item.title}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            background: "rgba(107, 29, 47, 0.08)",
+                            color: PALETTE.maroon,
+                            padding: "3px 8px",
+                            borderRadius: "10px",
+                            fontSize: "0.74rem",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {item.rerolls} rerolls
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div style={{ padding: "24px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
                   No reroll records yet.
@@ -1734,10 +1980,12 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                 ...compactInputStyle,
                 width: "100%",
                 maxWidth: "280px",
+                flex: "1 1 200px",
               }}
             />
 
             <div
+              className="sn-touch-scroll"
               style={{
                 display: "inline-flex",
                 background: "var(--sn-paper)",
@@ -1769,6 +2017,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                     fontWeight: streamFilter === f.id ? 600 : 500,
                     cursor: "pointer",
                     boxShadow: streamFilter === f.id ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
                   }}
                 >
                   {f.label}
@@ -1779,143 +2029,267 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
 
           {/* Activity Table */}
           {filteredRecentSearches.length > 0 ? (
-            <div style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={{ ...tableHeaderStyle, width: "130px" }}>Timestamp</th>
-                    <th style={{ ...tableHeaderStyle, width: "120px" }}>User ID</th>
-                    <th style={tableHeaderStyle}>Query</th>
-                    <th style={{ ...tableHeaderStyle, width: "95px", textAlign: "center" }}>Device</th>
-                    <th style={{ ...tableHeaderStyle, width: "110px", textAlign: "center" }}>Status</th>
-                    <th style={{ ...tableHeaderStyle, width: "90px", textAlign: "center" }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedRecentSearches.map((item, idx) => {
-                    const isFound = item.resultFound === "Yes";
-                    const formattedDate = item.timestamp
-                      ? new Date(item.timestamp).toLocaleString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "—";
+            <>
+              <div className="admin-desktop-table" style={{ overflowX: "auto", borderRadius: "8px", border: "1px solid var(--sn-paper-line)" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ ...tableHeaderStyle, width: "130px" }}>Timestamp</th>
+                      <th style={{ ...tableHeaderStyle, width: "120px" }}>User ID</th>
+                      <th style={tableHeaderStyle}>Query</th>
+                      <th style={{ ...tableHeaderStyle, width: "95px", textAlign: "center" }}>Device</th>
+                      <th style={{ ...tableHeaderStyle, width: "110px", textAlign: "center" }}>Status</th>
+                      <th style={{ ...tableHeaderStyle, width: "90px", textAlign: "center" }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedRecentSearches.map((item, idx) => {
+                      const isFound = item.resultFound === "Yes";
+                      const formattedDate = item.timestamp
+                        ? new Date(item.timestamp).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—";
 
-                    return (
-                      <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
-                        <td
-                          style={{
-                            ...tableCellStyle,
-                            fontSize: "0.76rem",
-                            color: "var(--sn-text-sub)",
-                            fontVariantNumeric: "tabular-nums",
-                            whiteSpace: "nowrap",
-                          }}
-                          title={item.timestamp}
-                        >
-                          {formattedDate}
-                        </td>
-                        <td style={{ ...tableCellStyle, fontSize: "0.74rem", fontFamily: "monospace" }}>
-                          <span
+                      return (
+                        <tr key={idx} className="admin-novel-row" style={{ transition: "background 0.12s" }}>
+                          <td
                             style={{
-                              background: "var(--sn-paper)",
-                              border: "1px solid var(--sn-paper-line)",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
+                              ...tableCellStyle,
+                              fontSize: "0.76rem",
                               color: "var(--sn-text-sub)",
-                            }}
-                            title={item.userId}
-                          >
-                            {item.userId?.length > 13 ? `${item.userId.slice(0, 12)}…` : item.userId || "anon"}
-                          </span>
-                        </td>
-                        <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
-                          {item.query || item.search}
-                        </td>
-                        <td style={{ ...tableCellStyle, textAlign: "center" }}>
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              fontSize: "0.75rem",
-                              color: "var(--sn-text-sub)",
+                              fontVariantNumeric: "tabular-nums",
                               whiteSpace: "nowrap",
                             }}
+                            title={item.timestamp}
                           >
+                            {formattedDate}
+                          </td>
+                          <td style={{ ...tableCellStyle, fontSize: "0.74rem", fontFamily: "monospace" }}>
+                            <span
+                              style={{
+                                background: "var(--sn-paper)",
+                                border: "1px solid var(--sn-paper-line)",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                color: "var(--sn-text-sub)",
+                              }}
+                              title={item.userId}
+                            >
+                              {item.userId?.length > 13 ? `${item.userId.slice(0, 12)}…` : item.userId || "anon"}
+                            </span>
+                          </td>
+                          <td style={{ ...tableCellStyle, fontWeight: 500, color: "var(--sn-ink)" }}>
+                            {item.query || item.search}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                fontSize: "0.75rem",
+                                color: "var(--sn-text-sub)",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {item.device === "Mobile" ? (
+                                <>
+                                  <Smartphone size={12} strokeWidth={1.75} style={{ color: PALETTE.gold }} /> Mobile
+                                </>
+                              ) : item.device === "Desktop" ? (
+                                <>
+                                  <Monitor size={12} strokeWidth={1.75} style={{ color: PALETTE.slate }} /> Desktop
+                                </>
+                              ) : (
+                                item.device || "Unknown"
+                              )}
+                            </span>
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                            <span
+                              style={{
+                                background: isFound ? "rgba(45, 106, 79, 0.08)" : "rgba(107, 29, 47, 0.08)",
+                                color: isFound ? PALETTE.emerald : PALETTE.maroon,
+                                border: `1px solid ${isFound ? "rgba(45, 106, 79, 0.2)" : "rgba(107, 29, 47, 0.2)"}`,
+                                padding: "2px 7px",
+                                borderRadius: "10px",
+                                fontSize: "0.73rem",
+                                fontWeight: 600,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {isFound ? (
+                                <>
+                                  <CheckCircle size={11} strokeWidth={2} /> Found
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={11} strokeWidth={2} /> No Result
+                                </>
+                              )}
+                            </span>
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: "center" }}>
+                            {!isFound && (
+                              <button
+                                type="button"
+                                onClick={() => handleAddToCatalog(item.query || item.search)}
+                                style={{
+                                  padding: "3px 8px",
+                                  borderRadius: "4px",
+                                  border: "1px solid var(--sn-paper-line)",
+                                  background: "var(--sn-paper)",
+                                  color: "var(--sn-ink)",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "3px",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={`Add "${item.query || item.search}" to catalog`}
+                              >
+                                <Plus size={10} strokeWidth={2} /> Add
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Stacked Activity Log Cards */}
+              <div className="admin-mobile-cards" style={{ display: "none", flexDirection: "column", gap: "8px" }}>
+                {paginatedRecentSearches.map((item, idx) => {
+                  const isFound = item.resultFound === "Yes";
+                  const formattedDate = item.timestamp
+                    ? new Date(item.timestamp).toLocaleString([], {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "—";
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        background: "var(--sn-paper)",
+                        border: "1px solid var(--sn-paper-line)",
+                        borderRadius: "10px",
+                        padding: "10px 12px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }}
+                    >
+                      {/* Top line: Query + Status badge */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                        <span style={{ fontWeight: 600, color: "var(--sn-ink)", fontSize: "0.86rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
+                          {item.query || item.search}
+                        </span>
+                        <span
+                          style={{
+                            background: isFound ? "rgba(45, 106, 79, 0.08)" : "rgba(107, 29, 47, 0.08)",
+                            color: isFound ? PALETTE.emerald : PALETTE.maroon,
+                            border: `1px solid ${isFound ? "rgba(45, 106, 79, 0.2)" : "rgba(107, 29, 47, 0.2)"}`,
+                            padding: "2px 7px",
+                            borderRadius: "10px",
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isFound ? (
+                            <>
+                              <CheckCircle size={11} strokeWidth={2} /> Found
+                            </>
+                          ) : (
+                            <>
+                              <XCircle size={11} strokeWidth={2} /> No Result
+                            </>
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Bottom line: User ID + Time + Device + + Add button */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", fontSize: "0.73rem", color: "var(--sn-text-sub)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden", flexWrap: "wrap" }}>
+                          <span
+                            style={{
+                              background: "var(--sn-paper-card)",
+                              border: "1px solid var(--sn-paper-line)",
+                              padding: "1px 5px",
+                              borderRadius: "4px",
+                              fontFamily: "monospace",
+                              fontSize: "0.71rem",
+                            }}
+                          >
+                            {item.userId?.length > 10 ? `${item.userId.slice(0, 8)}…` : item.userId || "anon"}
+                          </span>
+                          <span>·</span>
+                          <span>{formattedDate}</span>
+                          <span>·</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
                             {item.device === "Mobile" ? (
                               <>
-                                <Smartphone size={12} strokeWidth={1.75} style={{ color: PALETTE.gold }} /> Mobile
+                                <Smartphone size={11} strokeWidth={1.75} style={{ color: PALETTE.gold }} /> Mobile
                               </>
                             ) : item.device === "Desktop" ? (
                               <>
-                                <Monitor size={12} strokeWidth={1.75} style={{ color: PALETTE.slate }} /> Desktop
+                                <Monitor size={11} strokeWidth={1.75} style={{ color: PALETTE.slate }} /> Desktop
                               </>
                             ) : (
                               item.device || "Unknown"
                             )}
                           </span>
-                        </td>
-                        <td style={{ ...tableCellStyle, textAlign: "center" }}>
-                          <span
+                        </div>
+
+                        {!isFound && (
+                          <button
+                            type="button"
+                            onClick={() => handleAddToCatalog(item.query || item.search)}
                             style={{
-                              background: isFound ? "rgba(45, 106, 79, 0.08)" : "rgba(107, 29, 47, 0.08)",
-                              color: isFound ? PALETTE.emerald : PALETTE.maroon,
-                              border: `1px solid ${isFound ? "rgba(45, 106, 79, 0.2)" : "rgba(107, 29, 47, 0.2)"}`,
-                              padding: "2px 7px",
-                              borderRadius: "10px",
-                              fontSize: "0.73rem",
+                              padding: "3px 8px",
+                              borderRadius: "5px",
+                              border: "1px solid var(--sn-paper-line)",
+                              background: "var(--sn-paper-card)",
+                              color: "var(--sn-ink)",
+                              fontSize: "0.72rem",
                               fontWeight: 600,
+                              cursor: "pointer",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "4px",
+                              gap: "3px",
                               whiteSpace: "nowrap",
+                              flexShrink: 0,
                             }}
+                            title={`Add "${item.query || item.search}" to catalog`}
                           >
-                            {isFound ? (
-                              <>
-                                <CheckCircle size={11} strokeWidth={2} /> Found
-                              </>
-                            ) : (
-                              <>
-                                <XCircle size={11} strokeWidth={2} /> No Result
-                              </>
-                            )}
-                          </span>
-                        </td>
-                        <td style={{ ...tableCellStyle, textAlign: "center" }}>
-                          {!isFound && (
-                            <button
-                              type="button"
-                              onClick={() => handleAddToCatalog(item.query || item.search)}
-                              style={{
-                                padding: "3px 8px",
-                                borderRadius: "4px",
-                                border: "1px solid var(--sn-paper-line)",
-                                background: "var(--sn-paper)",
-                                color: "var(--sn-ink)",
-                                fontSize: "0.72rem",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "3px",
-                                whiteSpace: "nowrap",
-                              }}
-                              title={`Add "${item.query || item.search}" to catalog`}
-                            >
-                              <Plus size={10} strokeWidth={2} /> Add
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            <Plus size={10} strokeWidth={2} /> Add
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           ) : (
             <div style={{ padding: "30px", textAlign: "center", color: "var(--sn-text-sub)", fontSize: "0.82rem" }}>
               No search logs match the current filter.
@@ -1932,6 +2306,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                 marginTop: "12px",
                 fontSize: "0.76rem",
                 color: "var(--sn-text-sub)",
+                flexWrap: "wrap",
+                gap: "8px",
               }}
             >
               <span>
@@ -1943,38 +2319,40 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                   disabled={streamPage <= 1}
                   onClick={() => setStreamPage((p) => Math.max(1, p - 1))}
                   style={{
-                    padding: "4px 9px",
-                    borderRadius: "5px",
+                    padding: "6px 12px",
+                    borderRadius: "6px",
                     border: "1px solid var(--sn-paper-line)",
                     background: "var(--sn-paper)",
                     color: streamPage <= 1 ? "var(--sn-text-sub)" : "var(--sn-ink)",
                     cursor: streamPage <= 1 ? "not-allowed" : "pointer",
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "3px",
-                    fontSize: "0.74rem",
+                    gap: "4px",
+                    fontSize: "0.75rem",
+                    minHeight: "34px",
                   }}
                 >
-                  <ChevronLeft size={13} strokeWidth={1.75} /> Prev
+                  <ChevronLeft size={14} strokeWidth={1.75} /> Prev
                 </button>
                 <button
                   type="button"
                   disabled={streamPage >= totalStreamPages}
                   onClick={() => setStreamPage((p) => Math.min(totalStreamPages, p + 1))}
                   style={{
-                    padding: "4px 9px",
-                    borderRadius: "5px",
+                    padding: "6px 12px",
+                    borderRadius: "6px",
                     border: "1px solid var(--sn-paper-line)",
                     background: "var(--sn-paper)",
                     color: streamPage >= totalStreamPages ? "var(--sn-text-sub)" : "var(--sn-ink)",
                     cursor: streamPage >= totalStreamPages ? "not-allowed" : "pointer",
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "3px",
-                    fontSize: "0.74rem",
+                    gap: "4px",
+                    fontSize: "0.75rem",
+                    minHeight: "34px",
                   }}
                 >
-                  Next <ChevronRight size={13} strokeWidth={1.75} />
+                  Next <ChevronRight size={14} strokeWidth={1.75} />
                 </button>
               </div>
             </div>

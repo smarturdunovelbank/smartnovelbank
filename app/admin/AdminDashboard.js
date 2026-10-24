@@ -1693,19 +1693,8 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
     <>
       <main style={{ maxWidth: "1120px", margin: "0 auto", padding: "24px 16px 48px", width: "100%" }}>
         {/* Top Header Bar */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "12px",
-            marginBottom: "20px",
-            paddingBottom: "16px",
-            borderBottom: "1px solid var(--sn-paper-line)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+        <div className="admin-header-row">
+          <div className="admin-header-row-1" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <Link
               href="/"
               style={{
@@ -1716,6 +1705,7 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "5px",
+                flexShrink: 0,
               }}
             >
               <ArrowLeft size={14} />
@@ -1731,14 +1721,15 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
                 alignItems: "center",
                 gap: "7px",
                 letterSpacing: "-0.01em",
+                whiteSpace: "nowrap",
               }}
             >
-              <ShieldCheck size={18} style={{ color: "var(--sn-gold)" }} />
+              <ShieldCheck size={18} style={{ color: "var(--sn-gold)", flexShrink: 0 }} />
               <span>Admin Control Center</span>
             </span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <div className="admin-header-row-2" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             {/* Admin Badge */}
             <span
               style={{
@@ -1752,11 +1743,14 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
+                minWidth: 0,
+                maxWidth: "160px",
+                flexShrink: 1,
               }}
               title={session?.user?.email}
             >
-              <User size={13} style={{ color: "var(--sn-gold)" }} />
-              <span style={{ maxWidth: "190px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <User size={13} style={{ color: "var(--sn-gold)", flexShrink: 0 }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {session?.user?.email || "Admin"}
               </span>
             </span>
@@ -1781,6 +1775,7 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
                 alignItems: "center",
                 gap: "5px",
                 transition: "all 0.15s ease",
+                flexShrink: 0,
               }}
             >
               <LogOut size={13} />
@@ -1792,13 +1787,16 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
         {/* Navigation Tab Bar — Modern SaaS Tab Strip */}
         <div
           role="tablist"
+          className="sn-touch-scroll"
           style={{
             display: "flex",
             gap: "4px",
             marginBottom: "24px",
             borderBottom: "1px solid var(--sn-paper-line)",
             overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
             scrollbarWidth: "none",
+            msOverflowStyle: "none",
           }}
         >
           {/* Tab 1: Novel Catalog */}
@@ -3536,9 +3534,9 @@ Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
                     e.preventDefault();
                     fetchNovels(catalogSearch);
                   }}
-                  style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}
+                  style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", width: "100%", maxWidth: "460px" }}
                 >
-                  <div style={{ position: "relative" }}>
+                  <div style={{ position: "relative", flex: "1 1 180px", minWidth: 0 }}>
                     <input
                       type="text"
                       value={catalogSearch}
@@ -3552,7 +3550,8 @@ Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
                         background: "var(--sn-paper)",
                         color: "var(--sn-text-main)",
                         fontSize: "0.86rem",
-                        width: "220px",
+                        width: "100%",
+                        boxSizing: "border-box",
                         outline: "none",
                       }}
                     />
@@ -3691,339 +3690,622 @@ Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
                   </p>
                 </div>
               ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table
-                    style={{
-                      width: "100%",
-                      borderCollapse: "separate",
-                      borderSpacing: "0 6px",
-                      fontSize: "0.86rem",
-                    }}
-                  >
-                    <thead>
-                      <tr style={{ color: "var(--sn-text-sub)", textAlign: "left", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                        <th style={{ padding: "8px 12px", width: "80px" }}>ID</th>
-                        <th style={{ padding: "8px 12px" }}>Novel Title</th>
-                        <th style={{ padding: "8px 12px" }}>Download / Read URL</th>
-                        <th style={{ padding: "8px 12px", width: "100px", textAlign: "center" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                            <Star size={12} style={{ color: "var(--sn-gold)" }} />
-                            <span>Featured</span>
-                          </span>
-                        </th>
-                        <th style={{ padding: "8px 12px", width: "160px", textAlign: "right" }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {novels.map((novel) => {
-                        const isEditing = editingNovelId === novel.id;
-                        return (
-                          <tr
-                            key={novel.id}
-                            className="admin-novel-row"
-                            style={{
-                              background: isEditing
-                                ? "rgba(180, 140, 60, 0.08)"
-                                : "var(--sn-paper)",
-                              border: isEditing
-                                ? "1px solid rgba(180, 140, 60, 0.35)"
-                                : "1px solid transparent",
-                              borderRadius: "8px",
-                              transition: "background 0.15s ease",
-                            }}
-                          >
-                            {/* ID */}
-                            <td
+                <>
+                  {/* Desktop Table (> 768px) */}
+                  <div className="admin-desktop-table" style={{ overflowX: "auto" }}>
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "separate",
+                        borderSpacing: "0 6px",
+                        fontSize: "0.86rem",
+                      }}
+                    >
+                      <thead>
+                        <tr style={{ color: "var(--sn-text-sub)", textAlign: "left", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                          <th style={{ padding: "8px 12px", width: "80px" }}>ID</th>
+                          <th style={{ padding: "8px 12px" }}>Novel Title</th>
+                          <th style={{ padding: "8px 12px" }}>Download / Read URL</th>
+                          <th style={{ padding: "8px 12px", width: "100px", textAlign: "center" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                              <Star size={12} style={{ color: "var(--sn-gold)" }} />
+                              <span>Featured</span>
+                            </span>
+                          </th>
+                          <th style={{ padding: "8px 12px", width: "160px", textAlign: "right" }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {novels.map((novel) => {
+                          const isEditing = editingNovelId === novel.id;
+                          return (
+                            <tr
+                              key={novel.id}
+                              className="admin-novel-row"
                               style={{
-                                padding: "10px 12px",
-                                borderTopLeftRadius: "8px",
-                                borderBottomLeftRadius: "8px",
-                                fontWeight: 600,
-                                color: "var(--sn-gold)",
-                                fontVariantNumeric: "tabular-nums",
+                                background: isEditing
+                                  ? "rgba(180, 140, 60, 0.08)"
+                                  : "var(--sn-paper)",
+                                border: isEditing
+                                  ? "1px solid rgba(180, 140, 60, 0.35)"
+                                  : "1px solid transparent",
+                                borderRadius: "8px",
+                                transition: "background 0.15s ease",
                               }}
                             >
-                              #{novel.id}
-                            </td>
-
-                            {/* Title */}
-                            <td
-                              style={{
-                                padding: isEditing ? "6px 10px" : "10px 12px",
-                                fontWeight: 600,
-                                color: "var(--sn-text-main)",
-                                cursor: isEditing ? "default" : "pointer",
-                              }}
-                              onDoubleClick={() => !isEditing && handleStartEdit(novel)}
-                              title={!isEditing ? "Double-click to edit title" : undefined}
-                            >
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  value={editTitle}
-                                  onChange={(e) => setEditTitle(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      handleSaveEdit(novel);
-                                    } else if (e.key === "Escape") {
-                                      e.preventDefault();
-                                      handleCancelEdit();
-                                    }
-                                  }}
-                                  placeholder="Novel Title"
-                                  autoFocus
-                                  disabled={savingEditId === novel.id}
-                                  style={{
-                                    width: "100%",
-                                    boxSizing: "border-box",
-                                    background: "var(--sn-paper-card, #ffffff)",
-                                    border: "1.5px solid var(--sn-gold, #c89d47)",
-                                    borderRadius: "6px",
-                                    padding: "6px 10px",
-                                    fontSize: "0.86rem",
-                                    fontWeight: 600,
-                                    color: "var(--sn-text-main)",
-                                    outline: "none",
-                                    boxShadow: "0 0 0 2px rgba(180, 140, 60, 0.2)",
-                                  }}
-                                />
-                              ) : (
-                                <Link
-                                  href={`/novel/${novel.id}`}
-                                  target="_blank"
-                                  style={{
-                                    color: "var(--sn-ink)",
-                                    textDecoration: "none",
-                                  }}
-                                  className="admin-novel-link"
-                                >
-                                  {novel.Titles}
-                                </Link>
-                              )}
-                            </td>
-
-                            {/* Link */}
-                            <td
-                              style={{
-                                padding: isEditing ? "6px 10px" : "10px 12px",
-                                cursor: isEditing ? "default" : "pointer",
-                              }}
-                              onDoubleClick={() => !isEditing && handleStartEdit(novel)}
-                              title={!isEditing ? "Double-click to edit link" : undefined}
-                            >
-                              {isEditing ? (
-                                <input
-                                  type="url"
-                                  value={editLink}
-                                  onChange={(e) => setEditLink(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      handleSaveEdit(novel);
-                                    } else if (e.key === "Escape") {
-                                      e.preventDefault();
-                                      handleCancelEdit();
-                                    }
-                                  }}
-                                  placeholder="https://..."
-                                  disabled={savingEditId === novel.id}
-                                  style={{
-                                    width: "100%",
-                                    boxSizing: "border-box",
-                                    background: "var(--sn-paper-card, #ffffff)",
-                                    border: "1.5px solid var(--sn-gold, #c89d47)",
-                                    borderRadius: "6px",
-                                    padding: "6px 10px",
-                                    fontSize: "0.82rem",
-                                    color: "var(--sn-text-main)",
-                                    outline: "none",
-                                    boxShadow: "0 0 0 2px rgba(180, 140, 60, 0.2)",
-                                  }}
-                                />
-                              ) : novel.Links ? (
-                                <a
-                                  href={novel.Links}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    color: "var(--sn-text-sub)",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "5px",
-                                    maxWidth: "340px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    fontSize: "0.82rem",
-                                  }}
-                                  title={novel.Links}
-                                >
-                                  <ExternalLink size={12} style={{ flexShrink: 0, opacity: 0.6 }} />
-                                  <span>{novel.Links}</span>
-                                </a>
-                              ) : (
-                                <span style={{ color: "var(--sn-text-sub)", fontStyle: "italic", fontSize: "0.82rem" }}>
-                                  No link provided
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Featured Toggle Action */}
-                            <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleCatalogFeatured(novel)}
-                                disabled={togglingFeaturedId === novel.id || isEditing || savingEditId === novel.id}
+                              {/* ID */}
+                              <td
                                 style={{
-                                  background: novel.featured ? "rgba(180, 140, 60, 0.12)" : "transparent",
-                                  border: `1px solid ${novel.featured ? "rgba(180, 140, 60, 0.4)" : "var(--sn-paper-line)"}`,
-                                  color: novel.featured ? "var(--sn-gold)" : "var(--sn-text-sub)",
-                                  borderRadius: "6px",
-                                  padding: "4px 9px",
-                                  cursor: togglingFeaturedId === novel.id || isEditing ? "not-allowed" : "pointer",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "5px",
-                                  fontSize: "0.76rem",
+                                  padding: "10px 12px",
+                                  borderTopLeftRadius: "8px",
+                                  borderBottomLeftRadius: "8px",
                                   fontWeight: 600,
-                                  transition: "all 0.15s ease",
-                                  opacity: isEditing ? 0.6 : 1,
+                                  color: "var(--sn-gold)",
+                                  fontVariantNumeric: "tabular-nums",
                                 }}
-                                title={novel.featured ? "Remove from Featured Novels" : "Add to Featured Novels"}
                               >
-                                {togglingFeaturedId === novel.id ? (
-                                  <Spinner size={12} color="var(--sn-gold)" />
-                                ) : (
-                                  <Star
-                                    size={13}
-                                    fill={novel.featured ? "currentColor" : "none"}
-                                    style={{ color: novel.featured ? "var(--sn-gold)" : "inherit" }}
-                                  />
-                                )}
-                                <span>{novel.featured ? "Featured" : "Regular"}</span>
-                              </button>
-                            </td>
+                                #{novel.id}
+                              </td>
 
-                            {/* Actions */}
-                            <td
-                              style={{
-                                padding: "10px 12px",
-                                borderTopRightRadius: "8px",
-                                borderBottomRightRadius: "8px",
-                                textAlign: "right",
-                              }}
-                            >
-                              {isEditing ? (
-                                <div
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "5px",
-                                    justifyContent: "flex-end",
-                                  }}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveEdit(novel)}
+                              {/* Title */}
+                              <td
+                                style={{
+                                  padding: isEditing ? "6px 10px" : "10px 12px",
+                                  fontWeight: 600,
+                                  color: "var(--sn-text-main)",
+                                  cursor: isEditing ? "default" : "pointer",
+                                }}
+                                onDoubleClick={() => !isEditing && handleStartEdit(novel)}
+                                title={!isEditing ? "Double-click to edit title" : undefined}
+                              >
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editTitle}
+                                    onChange={(e) => setEditTitle(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleSaveEdit(novel);
+                                      } else if (e.key === "Escape") {
+                                        e.preventDefault();
+                                        handleCancelEdit();
+                                      }
+                                    }}
+                                    placeholder="Novel Title"
+                                    autoFocus
                                     disabled={savingEditId === novel.id}
                                     style={{
-                                      background: "var(--sn-maroon, #6b1d2f)",
-                                      border: "1px solid var(--sn-maroon, #6b1d2f)",
-                                      color: "#ffffff",
-                                      padding: "4px 9px",
+                                      width: "100%",
+                                      boxSizing: "border-box",
+                                      background: "var(--sn-paper-card, #ffffff)",
+                                      border: "1.5px solid var(--sn-gold, #c89d47)",
                                       borderRadius: "6px",
-                                      fontSize: "0.78rem",
+                                      padding: "6px 10px",
+                                      fontSize: "0.86rem",
                                       fontWeight: 600,
-                                      cursor: savingEditId === novel.id ? "not-allowed" : "pointer",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "4px",
-                                      transition: "all 0.15s ease",
-                                      boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                                      color: "var(--sn-text-main)",
+                                      outline: "none",
+                                      boxShadow: "0 0 0 2px rgba(180, 140, 60, 0.2)",
                                     }}
-                                    title="Save changes (Enter)"
+                                  />
+                                ) : (
+                                  <Link
+                                    href={`/novel/${novel.id}`}
+                                    target="_blank"
+                                    style={{
+                                      color: "var(--sn-ink)",
+                                      textDecoration: "none",
+                                    }}
+                                    className="admin-novel-link"
                                   >
-                                    {savingEditId === novel.id ? (
-                                      <Spinner size={12} color="#ffffff" />
-                                    ) : (
-                                      <Check size={12} />
-                                    )}
-                                    <span>Save</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={handleCancelEdit}
+                                    {novel.Titles}
+                                  </Link>
+                                )}
+                              </td>
+
+                              {/* Link */}
+                              <td
+                                style={{
+                                  padding: isEditing ? "6px 10px" : "10px 12px",
+                                  cursor: isEditing ? "default" : "pointer",
+                                }}
+                                onDoubleClick={() => !isEditing && handleStartEdit(novel)}
+                                title={!isEditing ? "Double-click to edit link" : undefined}
+                              >
+                                {isEditing ? (
+                                  <input
+                                    type="url"
+                                    value={editLink}
+                                    onChange={(e) => setEditLink(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleSaveEdit(novel);
+                                      } else if (e.key === "Escape") {
+                                        e.preventDefault();
+                                        handleCancelEdit();
+                                      }
+                                    }}
+                                    placeholder="https://..."
                                     disabled={savingEditId === novel.id}
                                     style={{
-                                      background: "var(--sn-paper)",
-                                      border: "1px solid var(--sn-paper-line)",
-                                      color: "var(--sn-text-sub)",
-                                      padding: "4px 8px",
+                                      width: "100%",
+                                      boxSizing: "border-box",
+                                      background: "var(--sn-paper-card, #ffffff)",
+                                      border: "1.5px solid var(--sn-gold, #c89d47)",
                                       borderRadius: "6px",
-                                      fontSize: "0.78rem",
-                                      fontWeight: 500,
-                                      cursor: savingEditId === novel.id ? "not-allowed" : "pointer",
+                                      padding: "6px 10px",
+                                      fontSize: "0.82rem",
+                                      color: "var(--sn-text-main)",
+                                      outline: "none",
+                                      boxShadow: "0 0 0 2px rgba(180, 140, 60, 0.2)",
+                                    }}
+                                  />
+                                ) : novel.Links ? (
+                                  <a
+                                    href={novel.Links}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      color: "var(--sn-text-sub)",
                                       display: "inline-flex",
                                       alignItems: "center",
-                                      gap: "3px",
-                                      transition: "all 0.15s ease",
+                                      gap: "5px",
+                                      maxWidth: "340px",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      fontSize: "0.82rem",
                                     }}
-                                    title="Cancel editing (Esc)"
+                                    title={novel.Links}
                                   >
-                                    <X size={12} />
-                                    <span>Cancel</span>
-                                  </button>
-                                </div>
-                              ) : (
-                                <div
+                                    <ExternalLink size={12} style={{ flexShrink: 0, opacity: 0.6 }} />
+                                    <span>{novel.Links}</span>
+                                  </a>
+                                ) : (
+                                  <span style={{ color: "var(--sn-text-sub)", fontStyle: "italic", fontSize: "0.82rem" }}>
+                                    No link provided
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Featured Toggle Action */}
+                              <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleCatalogFeatured(novel)}
+                                  disabled={togglingFeaturedId === novel.id || isEditing || savingEditId === novel.id}
                                   style={{
+                                    background: novel.featured ? "rgba(180, 140, 60, 0.12)" : "transparent",
+                                    border: `1px solid ${novel.featured ? "rgba(180, 140, 60, 0.4)" : "var(--sn-paper-line)"}`,
+                                    color: novel.featured ? "var(--sn-gold)" : "var(--sn-text-sub)",
+                                    borderRadius: "6px",
+                                    padding: "4px 9px",
+                                    cursor: togglingFeaturedId === novel.id || isEditing ? "not-allowed" : "pointer",
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: "5px",
-                                    justifyContent: "flex-end",
+                                    fontSize: "0.76rem",
+                                    fontWeight: 600,
+                                    transition: "all 0.15s ease",
+                                    opacity: isEditing ? 0.6 : 1,
+                                  }}
+                                  title={novel.featured ? "Remove from Featured Novels" : "Add to Featured Novels"}
+                                >
+                                  {togglingFeaturedId === novel.id ? (
+                                    <Spinner size={12} color="var(--sn-gold)" />
+                                  ) : (
+                                    <Star
+                                      size={13}
+                                      fill={novel.featured ? "currentColor" : "none"}
+                                      style={{ color: novel.featured ? "var(--sn-gold)" : "inherit" }}
+                                    />
+                                  )}
+                                  <span>{novel.featured ? "Featured" : "Regular"}</span>
+                                </button>
+                              </td>
+
+                              {/* Actions */}
+                              <td
+                                style={{
+                                  padding: "10px 12px",
+                                  borderTopRightRadius: "8px",
+                                  borderBottomRightRadius: "8px",
+                                  textAlign: "right",
+                                }}
+                              >
+                                {isEditing ? (
+                                  <div
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "5px",
+                                      justifyContent: "flex-end",
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveEdit(novel)}
+                                      disabled={savingEditId === novel.id}
+                                      style={{
+                                        background: "var(--sn-maroon, #6b1d2f)",
+                                        border: "1px solid var(--sn-maroon, #6b1d2f)",
+                                        color: "#ffffff",
+                                        padding: "4px 9px",
+                                        borderRadius: "6px",
+                                        fontSize: "0.78rem",
+                                        fontWeight: 600,
+                                        cursor: savingEditId === novel.id ? "not-allowed" : "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                        transition: "all 0.15s ease",
+                                        boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                                      }}
+                                      title="Save changes (Enter)"
+                                    >
+                                      {savingEditId === novel.id ? (
+                                        <Spinner size={12} color="#ffffff" />
+                                      ) : (
+                                        <Check size={12} />
+                                      )}
+                                      <span>Save</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleCancelEdit}
+                                      disabled={savingEditId === novel.id}
+                                      style={{
+                                        background: "var(--sn-paper)",
+                                        border: "1px solid var(--sn-paper-line)",
+                                        color: "var(--sn-text-sub)",
+                                        padding: "4px 8px",
+                                        borderRadius: "6px",
+                                        fontSize: "0.78rem",
+                                        fontWeight: 500,
+                                        cursor: savingEditId === novel.id ? "not-allowed" : "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "3px",
+                                        transition: "all 0.15s ease",
+                                      }}
+                                      title="Cancel editing (Esc)"
+                                    >
+                                      <X size={12} />
+                                      <span>Cancel</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "5px",
+                                      justifyContent: "flex-end",
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEdit(novel)}
+                                      style={{
+                                        background: "var(--sn-paper)",
+                                        border: "1px solid var(--sn-paper-line)",
+                                        color: "var(--sn-text-main)",
+                                        padding: "4px 9px",
+                                        borderRadius: "6px",
+                                        fontSize: "0.78rem",
+                                        fontWeight: 500,
+                                        cursor: "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                        transition: "all 0.15s ease",
+                                      }}
+                                      title="Edit novel title & link"
+                                    >
+                                      <Pencil size={12} style={{ color: "var(--sn-gold)" }} />
+                                      <span>Edit</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteNovel(novel.id, novel.Titles)}
+                                      disabled={deletingId === novel.id}
+                                      style={{
+                                        background: "var(--sn-alert-red-bg)",
+                                        border: "1px solid var(--sn-alert-red-border)",
+                                        color: "var(--sn-danger)",
+                                        padding: "4px 9px",
+                                        borderRadius: "6px",
+                                        fontSize: "0.78rem",
+                                        fontWeight: 500,
+                                        cursor: deletingId === novel.id ? "not-allowed" : "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                        transition: "all 0.15s ease",
+                                      }}
+                                      title="Delete novel"
+                                    >
+                                      {deletingId === novel.id ? (
+                                        <Spinner size={12} color="var(--sn-danger)" />
+                                      ) : (
+                                        <Trash2 size={12} />
+                                      )}
+                                      <span>Delete</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Stacked Action Cards (<= 768px) */}
+                  <div className="admin-mobile-cards">
+                    {novels.map((novel) => {
+                      const isEditing = editingNovelId === novel.id;
+                      return (
+                        <div
+                          key={`mobile-catalog-card-${novel.id}`}
+                          style={{
+                            background: isEditing
+                              ? "rgba(180, 140, 60, 0.08)"
+                              : "var(--sn-paper)",
+                            border: isEditing
+                              ? "1.5px solid var(--sn-gold)"
+                              : "1px solid var(--sn-paper-line)",
+                            borderRadius: "10px",
+                            padding: "12px 14px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "10px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                          }}
+                        >
+                          {isEditing ? (
+                            /* Mobile Editing Mode */
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--sn-gold)" }}>
+                                  Editing #{novel.id}
+                                </span>
+                              </div>
+                              <input
+                                type="text"
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                placeholder="Novel Title"
+                                autoFocus
+                                disabled={savingEditId === novel.id}
+                                style={{
+                                  width: "100%",
+                                  boxSizing: "border-box",
+                                  background: "var(--sn-paper-card)",
+                                  border: "1.5px solid var(--sn-gold)",
+                                  borderRadius: "6px",
+                                  padding: "8px 10px",
+                                  fontSize: "0.86rem",
+                                  fontWeight: 600,
+                                  color: "var(--sn-text-main)",
+                                  outline: "none",
+                                }}
+                              />
+                              <input
+                                type="url"
+                                value={editLink}
+                                onChange={(e) => setEditLink(e.target.value)}
+                                placeholder="https://..."
+                                disabled={savingEditId === novel.id}
+                                style={{
+                                  width: "100%",
+                                  boxSizing: "border-box",
+                                  background: "var(--sn-paper-card)",
+                                  border: "1px solid var(--sn-paper-line)",
+                                  borderRadius: "6px",
+                                  padding: "8px 10px",
+                                  fontSize: "0.82rem",
+                                  color: "var(--sn-text-main)",
+                                  outline: "none",
+                                }}
+                              />
+                              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveEdit(novel)}
+                                  disabled={savingEditId === novel.id}
+                                  style={{
+                                    flex: 1,
+                                    minHeight: "40px",
+                                    background: "var(--sn-ink)",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    fontSize: "0.84rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "5px",
                                   }}
                                 >
+                                  {savingEditId === novel.id ? <Spinner size={13} color="#fff" /> : <Check size={14} />}
+                                  <span>Save</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleCancelEdit}
+                                  disabled={savingEditId === novel.id}
+                                  style={{
+                                    flex: 1,
+                                    minHeight: "40px",
+                                    background: "var(--sn-paper)",
+                                    border: "1px solid var(--sn-paper-line)",
+                                    color: "var(--sn-text-sub)",
+                                    borderRadius: "6px",
+                                    fontSize: "0.84rem",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "5px",
+                                  }}
+                                >
+                                  <X size={14} />
+                                  <span>Cancel</span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Row 1: #ID badge + full wrapped Titles text + Featured button */}
+                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+                                <div style={{ display: "flex", alignItems: "baseline", gap: "7px", flex: 1, minWidth: 0 }}>
+                                  <span
+                                    style={{
+                                      fontFamily: "monospace",
+                                      fontWeight: 700,
+                                      color: "var(--sn-gold)",
+                                      fontSize: "0.8rem",
+                                      background: "rgba(201,149,44,0.1)",
+                                      padding: "1px 6px",
+                                      borderRadius: "4px",
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    #{novel.id}
+                                  </span>
+                                  <Link
+                                    href={`/novel/${novel.id}`}
+                                    target="_blank"
+                                    style={{
+                                      color: "var(--sn-ink)",
+                                      fontWeight: 600,
+                                      fontSize: "0.92rem",
+                                      lineHeight: 1.35,
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {novel.Titles}
+                                  </Link>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleCatalogFeatured(novel)}
+                                  disabled={togglingFeaturedId === novel.id}
+                                  style={{
+                                    background: novel.featured ? "rgba(180, 140, 60, 0.12)" : "transparent",
+                                    border: `1px solid ${novel.featured ? "rgba(180, 140, 60, 0.4)" : "var(--sn-paper-line)"}`,
+                                    color: novel.featured ? "var(--sn-gold)" : "var(--sn-text-sub)",
+                                    borderRadius: "6px",
+                                    padding: "4px 8px",
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 600,
+                                    flexShrink: 0,
+                                  }}
+                                  title={novel.featured ? "Featured Novel" : "Regular Novel"}
+                                >
+                                  {togglingFeaturedId === novel.id ? (
+                                    <Spinner size={11} color="var(--sn-gold)" />
+                                  ) : (
+                                    <Star
+                                      size={12}
+                                      fill={novel.featured ? "currentColor" : "none"}
+                                      style={{ color: novel.featured ? "var(--sn-gold)" : "inherit" }}
+                                    />
+                                  )}
+                                </button>
+                              </div>
+
+                              {/* Row 2: Truncated clickable Link (flex: 1) + right-aligned Edit and Delete */}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: "10px",
+                                  borderTop: "1px solid var(--sn-paper-line)",
+                                  paddingTop: "8px",
+                                }}
+                              >
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  {novel.Links ? (
+                                    <a
+                                      href={novel.Links}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        color: "var(--sn-text-sub)",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                        fontSize: "0.76rem",
+                                        maxWidth: "100%",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                      title={novel.Links}
+                                    >
+                                      <ExternalLink size={11} style={{ flexShrink: 0, opacity: 0.7 }} />
+                                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                        {novel.Links.replace(/^https?:\/\//i, "")}
+                                      </span>
+                                    </a>
+                                  ) : (
+                                    <span style={{ color: "var(--sn-text-sub)", fontSize: "0.76rem", fontStyle: "italic", opacity: 0.6 }}>
+                                      No link
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
                                   <button
                                     type="button"
                                     onClick={() => handleStartEdit(novel)}
                                     style={{
-                                      background: "var(--sn-paper)",
+                                      background: "var(--sn-paper-card)",
                                       border: "1px solid var(--sn-paper-line)",
                                       color: "var(--sn-text-main)",
-                                      padding: "4px 9px",
+                                      padding: "6px 12px",
                                       borderRadius: "6px",
                                       fontSize: "0.78rem",
-                                      fontWeight: 500,
+                                      fontWeight: 600,
                                       cursor: "pointer",
                                       display: "inline-flex",
                                       alignItems: "center",
                                       gap: "4px",
-                                      transition: "all 0.15s ease",
+                                      minHeight: "34px",
                                     }}
-                                    title="Edit novel title & link"
                                   >
                                     <Pencil size={12} style={{ color: "var(--sn-gold)" }} />
                                     <span>Edit</span>
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={() => handleDeleteNovel(novel.id, novel.Titles)}
                                     disabled={deletingId === novel.id}
                                     style={{
                                       background: "var(--sn-alert-red-bg)",
                                       border: "1px solid var(--sn-alert-red-border)",
                                       color: "var(--sn-danger)",
-                                      padding: "4px 9px",
+                                      padding: "6px 10px",
                                       borderRadius: "6px",
                                       fontSize: "0.78rem",
-                                      fontWeight: 500,
+                                      fontWeight: 600,
                                       cursor: deletingId === novel.id ? "not-allowed" : "pointer",
                                       display: "inline-flex",
                                       alignItems: "center",
                                       gap: "4px",
-                                      transition: "all 0.15s ease",
+                                      minHeight: "34px",
                                     }}
-                                    title="Delete novel"
                                   >
                                     {deletingId === novel.id ? (
                                       <Spinner size={12} color="var(--sn-danger)" />
@@ -4033,14 +4315,14 @@ Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
                                     <span>Delete</span>
                                   </button>
                                 </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </section>
           </div>
@@ -5321,6 +5603,10 @@ Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
           background: var(--sn-alert-red-bg) !important;
           border-color: var(--sn-alert-red-border) !important;
           color: var(--sn-danger) !important;
+        }
+        .admin-nav-tab {
+          flex-shrink: 0 !important;
+          white-space: nowrap !important;
         }
         .admin-nav-tab:hover:not(.active) {
           color: var(--sn-ink) !important;

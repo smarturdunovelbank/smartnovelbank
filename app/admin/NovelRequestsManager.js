@@ -581,6 +581,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
           TOP KPI CARDS ROW (4 Executive SaaS Metrics)
       ══════════════════════════════════════════════════════════════════════ */}
       <div
+        className="admin-kpi-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
@@ -589,6 +590,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
       >
         {/* Card 1: Total Requests */}
         <div
+          className="admin-kpi-card"
           onClick={() => {
             setStatusFilter("all");
             setPage(1);
@@ -640,6 +642,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
 
         {/* Card 2: Pending Action (Warm Gold Highlight) */}
         <div
+          className="admin-kpi-card"
           onClick={() => {
             setStatusFilter("Pending");
             setPage(1);
@@ -704,6 +707,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
 
         {/* Card 3: Fulfilled / Completed (Emerald Accent) */}
         <div
+          className="admin-kpi-card"
           onClick={() => {
             setStatusFilter("Completed");
             setPage(1);
@@ -755,6 +759,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
 
         {/* Card 4: Unavailable / Custom */}
         <div
+          className="admin-kpi-card"
           onClick={() => {
             setStatusFilter("PDF Not Available");
             setPage(1);
@@ -825,6 +830,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
         <div
           role="radiogroup"
           aria-label="Filter requests by status"
+          className="sn-touch-scroll"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -834,6 +840,9 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
             border: "1px solid var(--sn-paper-line)",
             gap: "2px",
             overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
             maxWidth: "100%",
           }}
         >
@@ -867,6 +876,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                   alignItems: "center",
                   gap: "6px",
                   whiteSpace: "nowrap",
+                  flexShrink: 0,
                   boxShadow: isSelected ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
                   transition: "all 0.15s ease",
                 }}
@@ -893,7 +903,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
         </div>
 
         {/* Search Input & Refresh Button */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: "1 1 320px", maxWidth: "480px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: "1 1 240px", maxWidth: "480px" }}>
           <div style={{ position: "relative", width: "100%" }}>
             <Search
               size={15}
@@ -983,7 +993,8 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
           overflow: "hidden",
         }}
       >
-        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+        {/* Desktop Table View (> 768px) */}
+        <div className="admin-desktop-table" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <table
             style={{
               width: "100%",
@@ -1317,6 +1328,311 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
           </table>
         </div>
 
+        {/* Mobile Stacked Action Cards View (<= 768px) */}
+        <div className="admin-mobile-cards" style={{ padding: "12px" }}>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "40px 16px", color: "var(--sn-text-sub)" }}>
+              <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                <Spinner size={24} color="var(--sn-gold)" />
+                <span>Loading requests...</span>
+              </div>
+            </div>
+          ) : loadError ? (
+            <div style={{ textAlign: "center", padding: "30px 16px" }}>
+              <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                <AlertCircle size={30} style={{ color: "var(--sn-danger)" }} />
+                <span style={{ fontWeight: 600, color: "var(--sn-danger)", fontSize: "0.95rem" }}>
+                  Error Loading Requests
+                </span>
+                <span style={{ fontSize: "0.84rem", color: "var(--sn-text-sub)", maxWidth: "420px", lineHeight: 1.45 }}>
+                  {loadError}
+                </span>
+                <button
+                  onClick={() => fetchRequests(true)}
+                  className="admin-btn-secondary"
+                  style={{
+                    marginTop: "6px",
+                    padding: "6px 14px",
+                    borderRadius: "7px",
+                    border: "1px solid var(--sn-paper-line)",
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <RefreshCw size={12} />
+                  <span>Retry</span>
+                </button>
+              </div>
+            </div>
+          ) : requests.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 16px", color: "var(--sn-text-sub)" }}>
+              <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                <Inbox size={32} strokeWidth={1.5} style={{ opacity: 0.5 }} />
+                <span style={{ fontWeight: 600, color: "var(--sn-ink)" }}>No requests found</span>
+                <span style={{ fontSize: "0.82rem" }}>
+                  {debouncedSearch
+                    ? "Try clearing your search query or switching status filters."
+                    : "No novel requests submitted under this status filter yet."}
+                </span>
+              </div>
+            </div>
+          ) : (
+            requests.map((req) => {
+              const isPending = req.status === "Pending" || !req.status;
+              const hasMessage = Boolean(req.message && req.message.trim());
+              const hasLink = Boolean(req.pdf_link && /^https?:\/\//i.test(req.pdf_link));
+
+              return (
+                <div
+                  key={`mobile-request-${req.id}`}
+                  style={{
+                    background: "var(--sn-paper-card)",
+                    border: "1px solid var(--sn-paper-line)",
+                    borderRadius: "12px",
+                    padding: "14px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                  }}
+                >
+                  {/* Top Row: #<id> badge + Status badge on right */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span
+                        style={{
+                          fontFamily: "'Courier New', Courier, monospace",
+                          fontWeight: 700,
+                          color: "var(--sn-ink)",
+                          fontSize: "0.92rem",
+                          background: "var(--sn-paper)",
+                          border: "1px solid var(--sn-paper-line)",
+                          padding: "2px 7px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        #{req.id}
+                      </span>
+                      <span style={{ fontSize: "0.75rem", color: "var(--sn-text-sub)" }}>
+                        {formatDate(req.created_at)}
+                      </span>
+                      {req.device && (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "2px",
+                            fontSize: "0.72rem",
+                            color: "var(--sn-text-sub)",
+                            opacity: 0.8,
+                          }}
+                        >
+                          · {req.device.toLowerCase() === "mobile" ? <Smartphone size={10} /> : <Monitor size={10} />}
+                          <span>{req.device}</span>
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      {renderStatusBadge(req.status)}
+                    </div>
+                  </div>
+
+                  {/* Middle: Bold novel_name + muted writer_name */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: "var(--sn-ink)",
+                        fontSize: "0.98rem",
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {req.novel_name}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.82rem",
+                        color: req.writer_name ? "var(--sn-text-sub)" : "rgba(0,0,0,0.35)",
+                        fontStyle: req.writer_name ? "normal" : "italic",
+                      }}
+                    >
+                      {req.writer_name ? `By ${req.writer_name}` : "Author not specified"}
+                    </span>
+                  </div>
+
+                  {/* Message (if any) */}
+                  {hasMessage && (
+                    <div
+                      style={{
+                        background: "var(--sn-paper)",
+                        border: "1px solid var(--sn-paper-line)",
+                        borderRadius: "8px",
+                        padding: "8px 10px",
+                        fontSize: "0.8rem",
+                        color: "var(--sn-text-main)",
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      <p
+                        style={{
+                          margin: 0,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {req.message}
+                      </p>
+                      {req.message.length > 70 && (
+                        <button
+                          onClick={() => setViewingMessage(req)}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "var(--sn-gold)",
+                            fontSize: "0.74rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            padding: "4px 0 0 0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                          }}
+                        >
+                          <span>Read full note</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* PDF Link (if any) */}
+                  {hasLink && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        background: "rgba(201,149,44,0.06)",
+                        border: "1px solid rgba(201,149,44,0.2)",
+                        borderRadius: "6px",
+                        padding: "6px 10px",
+                        fontSize: "0.78rem",
+                      }}
+                    >
+                      <ExternalLink size={12} style={{ color: "var(--sn-gold)", flexShrink: 0 }} />
+                      <a
+                        href={req.pdf_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={req.pdf_link}
+                        style={{
+                          color: "var(--sn-gold)",
+                          textDecoration: "none",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          flex: 1,
+                        }}
+                      >
+                        {req.pdf_link.replace(/^https?:\/\//i, "")}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Bottom Action Bar: Full-Width Flex Row */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      borderTop: "1px solid var(--sn-paper-line)",
+                      paddingTop: "10px",
+                      marginTop: "2px",
+                    }}
+                  >
+                    <button
+                      onClick={() => openEditor(req)}
+                      className="admin-btn-secondary"
+                      style={{
+                        flex: 1,
+                        minHeight: "42px",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.84rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        border: "1px solid var(--sn-paper-line)",
+                        background: "var(--sn-paper)",
+                        color: "var(--sn-ink)",
+                      }}
+                    >
+                      <Pencil size={13} style={{ color: "var(--sn-gold)" }} />
+                      <span>{isPending ? "Fulfill Request" : "Edit Request"}</span>
+                    </button>
+
+                    {isPending && (
+                      <button
+                        onClick={() => handleQuickMarkUnavailable(req)}
+                        title="Quick Mark Unavailable"
+                        aria-label="Quick Mark Unavailable"
+                        style={{
+                          minHeight: "42px",
+                          padding: "8px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid var(--sn-alert-red-border)",
+                          background: "var(--sn-alert-red-bg)",
+                          color: "var(--sn-danger)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <XCircle size={14} />
+                        <span>Unavailable</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => setDeleteTarget(req)}
+                      title="Delete Request"
+                      aria-label={`Delete Request #${req.id}`}
+                      style={{
+                        minHeight: "42px",
+                        minWidth: "42px",
+                        padding: "8px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--sn-paper-line)",
+                        background: "var(--sn-paper)",
+                        color: "var(--sn-text-sub)",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
         {/* Pagination Bar */}
         {totalPages > 1 && (
           <div
@@ -1407,32 +1723,10 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="editor-modal-title"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            background: "rgba(0,0,0,0.5)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-            animation: "admin-fadeIn 0.15s ease-out",
-          }}
+          className="admin-modal-overlay"
         >
           <div
-            style={{
-              background: "var(--sn-paper)",
-              border: "1px solid var(--sn-paper-line)",
-              borderRadius: "14px",
-              width: "100%",
-              maxWidth: "600px",
-              maxHeight: "90vh",
-              overflowY: "auto",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
-              display: "flex",
-              flexDirection: "column",
-            }}
+            className="admin-modal-card"
           >
             {/* Modal Header */}
             <div
@@ -1486,9 +1780,9 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
             </div>
 
             {/* Modal Form Body */}
-            <form onSubmit={handleSaveEdit} style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: "18px" }}>
+            <form onSubmit={handleSaveEdit} style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: "16px" }}>
               {/* Novel Title & Writer Fields */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="admin-modal-title-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--sn-ink)" }}>
                     Novel Title <span style={{ color: "var(--sn-danger)" }}>*</span>
@@ -1507,6 +1801,8 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                       background: "var(--sn-paper)",
                       color: "var(--sn-ink)",
                       fontSize: "0.88rem",
+                      minHeight: "42px",
+                      boxSizing: "border-box",
                     }}
                   />
                 </div>
@@ -1528,6 +1824,8 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                       background: "var(--sn-paper)",
                       color: "var(--sn-ink)",
                       fontSize: "0.88rem",
+                      minHeight: "42px",
+                      boxSizing: "border-box",
                     }}
                   />
                 </div>
@@ -1805,7 +2103,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                   alignItems: "center",
                   justifyContent: "flex-end",
                   gap: "10px",
-                  paddingTop: "10px",
+                  paddingTop: "12px",
                   borderTop: "1px solid var(--sn-paper-line)",
                 }}
               >
@@ -1815,13 +2113,18 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                   disabled={savingEdit}
                   className="admin-btn-secondary"
                   style={{
-                    padding: "8px 16px",
+                    padding: "10px 18px",
                     borderRadius: "8px",
                     border: "1px solid var(--sn-paper-line)",
                     background: "var(--sn-paper-card)",
                     color: "var(--sn-ink)",
                     fontSize: "0.86rem",
+                    fontWeight: 600,
                     cursor: "pointer",
+                    minHeight: "42px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
                   Cancel
@@ -1832,7 +2135,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                   disabled={savingEdit}
                   className="admin-btn-primary"
                   style={{
-                    padding: "8px 20px",
+                    padding: "10px 22px",
                     borderRadius: "8px",
                     border: "none",
                     background: "var(--sn-ink)",
@@ -1842,7 +2145,9 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                     cursor: savingEdit ? "not-allowed" : "pointer",
                     display: "inline-flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: "6px",
+                    minHeight: "42px",
                   }}
                 >
                   {savingEdit ? (
