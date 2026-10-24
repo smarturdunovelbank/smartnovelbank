@@ -347,7 +347,7 @@ function SectionCard({ title, icon: Icon, action, children, style: extraStyle, c
             {Icon && <Icon size={16} strokeWidth={1.75} style={{ color: "var(--sn-gold)", flexShrink: 0 }} />}
             <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600, color: "var(--sn-ink)", overflowWrap: "break-word" }}>{title}</h3>
           </div>
-          {action && <div style={{ flexShrink: 0 }}>{action}</div>}
+          {action && <div style={{ maxWidth: "100%", minWidth: 0 }}>{action}</div>}
         </div>
       )}
       {children}
@@ -1096,7 +1096,18 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
             }
             icon={TrendingUp}
             action={
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  boxSizing: "border-box",
+                }}
+              >
                 <span style={{ fontSize: "0.75rem", color: "var(--sn-text-sub)", whiteSpace: "nowrap" }}>
                   {dailyTrendData.length} days recorded
                   {chartTrendData.length !== dailyTrendData.length && (
@@ -1113,6 +1124,9 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                     borderRadius: "6px",
                     padding: "2px",
                     gap: "2px",
+                    maxWidth: "100%",
+                    overflowX: "auto",
+                    boxSizing: "border-box",
                   }}
                   role="group"
                   aria-label="Chart Granularity"
@@ -1146,6 +1160,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                           cursor: "pointer",
                           boxShadow: isSelected ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
                           transition: "all 0.12s ease",
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
                         }}
                       >
                         {g.label}
