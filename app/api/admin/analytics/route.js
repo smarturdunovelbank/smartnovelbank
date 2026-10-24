@@ -179,8 +179,9 @@ function computeSearchTrends(searches) {
       dailyMap[dayKey].noResults++;
     }
 
-    // Hourly
-    hourlyDist[d.getUTCHours()]++;
+    // Hourly (converted to PKT / UTC+5)
+    const hour = (d.getUTCHours() + 5) % 24;
+    hourlyDist[hour]++;
   }
 
   // Sort daily by date ascending
@@ -303,7 +304,8 @@ function computeSurpriseAnalytics(surpriseRecords, topN = 20) {
     if (r.eventType === "click") dailyMap[dayKey].clicks++;
     if (r.eventType === "reroll") dailyMap[dayKey].rerolls++;
     if (r.eventType === "download") dailyMap[dayKey].downloads++;
-    hourlyDist[d.getUTCHours()]++;
+    const hour = (d.getUTCHours() + 5) % 24;
+    hourlyDist[hour]++;
   }
   const daily = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
 

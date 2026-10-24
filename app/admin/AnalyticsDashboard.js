@@ -1400,8 +1400,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
       ═══════════════════════════════════════════════════════════════════════ */}
       {analyticsData && activeSegment === "traffic" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* Peak Activity Hours (24h Distribution) */}
-          <SectionCard title="Peak Activity Hours (24-Hour Distribution UTC)" icon={Clock}>
+          {/* Peak Activity Hours (Local Time / PKT) */}
+          <SectionCard title="Peak Activity Hours (Local Time / PKT)" icon={Clock}>
             <div style={{ fontSize: "0.78rem", color: "var(--sn-text-sub)", marginBottom: "14px" }}>
               Reader traffic volume across all 24 hours of the day.
             </div>

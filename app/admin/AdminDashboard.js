@@ -42,8 +42,10 @@ import {
   LuStar as Star,
   LuPencil as Pencil,
   LuChartColumn as BarChart3,
+  LuInbox as Inbox,
 } from "react-icons/lu";
 import AnalyticsDashboard from "./AnalyticsDashboard";
+import NovelRequestsManager from "./NovelRequestsManager";
 
 // ── SVG Spinner ──────────────────────────────────────────────────────────────
 function Spinner({ size = 18, color = "currentColor" }) {
@@ -101,7 +103,7 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
 
   // Sync tab with URL if param changes
   useEffect(() => {
-    if (queryTab && ["catalog", "train-bot", "settings", "analytics"].includes(queryTab)) {
+    if (queryTab && ["catalog", "requests", "train-bot", "settings", "analytics"].includes(queryTab)) {
       setActiveTab(queryTab);
     }
   }, [queryTab]);
@@ -345,14 +347,37 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
     }
   }, []);
 
+  // ── Novel Requests Summary State ─────────────────────────────────────────
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(null);
+
+  const fetchRequestsSummary = useCallback(async (tokenOverride) => {
+    const token = tokenOverride || session?.access_token;
+    if (!token) return;
+    try {
+      const res = await fetch("/api/admin/requests?pageSize=1", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data?.counts?.pendingCount === "number") {
+          setPendingRequestsCount(data.counts.pendingCount);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch requests summary:", err);
+    }
+  }, [session?.access_token]);
+
   // Trigger data fetching when session becomes available
   useEffect(() => {
     if (session?.access_token) {
       fetchNovels("", session.access_token);
       fetchKnowledgeBase(session.access_token);
       fetchSettings();
+      fetchRequestsSummary(session.access_token);
     }
-  }, [session?.access_token, fetchNovels, fetchKnowledgeBase, fetchSettings]);
+  }, [session?.access_token, fetchNovels, fetchKnowledgeBase, fetchSettings, fetchRequestsSummary]);
 
   // ── Auth Handlers ────────────────────────────────────────────────────────
   const handleSignIn = async (e) => {
@@ -1817,7 +1842,63 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
             )}
           </button>
 
-          {/* Tab 2: AI Knowledge Base */}
+          {/* Tab 2: Novel Requests */}
+          <button
+            role="tab"
+            aria-selected={activeTab === "requests"}
+            onClick={() => switchTab("requests")}
+            className={`admin-nav-tab ${activeTab === "requests" ? "active" : ""}`}
+            style={{
+              padding: "10px 16px",
+              background: "transparent",
+              border: "none",
+              borderBottom: activeTab === "requests" ? "2px solid var(--sn-gold)" : "2px solid transparent",
+              color: activeTab === "requests" ? "var(--sn-ink)" : "var(--sn-text-sub)",
+              fontWeight: activeTab === "requests" ? 600 : 500,
+              fontSize: "0.88rem",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              whiteSpace: "nowrap",
+              transition: "all 0.15s ease",
+              marginBottom: "-1px",
+            }}
+          >
+            <Inbox
+              size={16}
+              style={{
+                color: activeTab === "requests" ? "var(--sn-gold)" : "currentColor",
+                opacity: activeTab === "requests" ? 1 : 0.7,
+              }}
+            />
+            <span>Novel Requests</span>
+            {pendingRequestsCount !== null && (
+              <span
+                style={{
+                  background:
+                    pendingRequestsCount > 0
+                      ? "rgba(201,149,44,0.18)"
+                      : activeTab === "requests"
+                      ? "rgba(201,149,44,0.12)"
+                      : "var(--sn-paper)",
+                  border: `1px solid ${
+                    pendingRequestsCount > 0 ? "rgba(201,149,44,0.4)" : "var(--sn-paper-line)"
+                  }`,
+                  color: pendingRequestsCount > 0 ? "var(--sn-ink)" : "var(--sn-text-sub)",
+                  fontSize: "0.72rem",
+                  padding: "1px 7px",
+                  borderRadius: "10px",
+                  fontWeight: pendingRequestsCount > 0 ? 700 : 500,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {pendingRequestsCount.toLocaleString()}
+              </span>
+            )}
+          </button>
+
+          {/* Tab 3: AI Knowledge Base */}
           <button
             role="tab"
             aria-selected={activeTab === "train-bot"}
@@ -3955,6 +4036,20 @@ Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
               )}
             </section>
           </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            TAB 2: NOVEL REQUESTS MANAGEMENT
+        ════════════════════════════════════════════════════════════════════ */}
+        {activeTab === "requests" && (
+          <NovelRequestsManager
+            session={session}
+            onCountsUpdate={(counts) => {
+              if (typeof counts?.pendingCount === "number") {
+                setPendingRequestsCount(counts.pendingCount);
+              }
+            }}
+          />
         )}
 
         {/* ═══════════════════════════════════════════════════════════════════
