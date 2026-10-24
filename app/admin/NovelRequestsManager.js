@@ -580,14 +580,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
       {/* ═════════════════════════════════════════════════════════════════════
           TOP KPI CARDS ROW (4 Executive SaaS Metrics)
       ══════════════════════════════════════════════════════════════════════ */}
-      <div
-        className="admin-kpi-grid"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-          gap: "16px",
-        }}
-      >
+      <div className="admin-kpi-grid">
         {/* Card 1: Total Requests */}
         <div
           className="admin-kpi-card"
@@ -599,7 +592,6 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
             background: "var(--sn-paper)",
             border: `1px solid ${statusFilter === "all" ? "var(--sn-gold)" : "var(--sn-paper-line)"}`,
             borderRadius: "12px",
-            padding: "18px 20px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -651,7 +643,6 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
             background: "var(--sn-paper)",
             border: `1px solid ${statusFilter === "Pending" ? "var(--sn-gold)" : "var(--sn-paper-line)"}`,
             borderRadius: "12px",
-            padding: "18px 20px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -716,7 +707,6 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
             background: "var(--sn-paper)",
             border: `1px solid ${statusFilter === "Completed" ? "var(--sn-success)" : "var(--sn-paper-line)"}`,
             borderRadius: "12px",
-            padding: "18px 20px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -768,7 +758,6 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
             background: "var(--sn-paper)",
             border: `1px solid ${statusFilter === "PDF Not Available" ? "var(--sn-danger)" : "var(--sn-paper-line)"}`,
             borderRadius: "12px",
-            padding: "18px 20px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",

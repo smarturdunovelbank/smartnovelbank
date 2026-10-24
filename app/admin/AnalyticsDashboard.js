@@ -238,7 +238,6 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
         background: "var(--sn-paper-card)",
         border: "1px solid var(--sn-paper-line)",
         borderRadius: "12px",
-        padding: "18px 20px",
         boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
         display: "flex",
         flexDirection: "column",
@@ -267,7 +266,6 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
       <div
         className="admin-kpi-card-value"
         style={{
-          fontSize: "1.75rem",
           fontWeight: 700,
           color: "var(--sn-ink)",
           fontVariantNumeric: "tabular-nums",
@@ -933,14 +931,10 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
         <div
           className="analytics-subnav-container sn-touch-scroll"
           style={{
-            display: "inline-flex",
             background: "var(--sn-paper)",
             border: "1px solid var(--sn-paper-line)",
             borderRadius: "8px",
             padding: "3px",
-            gap: "2px",
-            overflowX: "auto",
-            whiteSpace: "nowrap",
           }}
         >
           {[
@@ -1008,14 +1002,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
 
       {/* ── TOP 4 KPI SCORECARDS (Always visible at top of Overview & Traffic) ── */}
       {analyticsData && searchOverview && (activeSegment === "overview" || activeSegment === "traffic") && (
-        <div
-          className="admin-kpi-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "14px",
-          }}
-        >
+        <div className="admin-kpi-grid">
           {/* Total Searches */}
           <KpiCard
             icon={Search}

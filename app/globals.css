@@ -1732,10 +1732,28 @@ a.whatsapp-channel-btn {
 /* ── Admin KPI Scorecards Mobile 2x2 Grid ── */
 .admin-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    width: 100%;
 }
-@media (max-width: 640px) {
+.admin-kpi-card {
+    padding: 18px 20px;
+}
+.admin-kpi-card-value {
+    font-size: 1.75rem;
+}
+
+/* ── Analytics Subnav Horizontal Touch-Scroll on Mobile ── */
+.analytics-subnav-wrapper {
+    width: 100%;
+}
+.analytics-subnav-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
     .admin-kpi-grid {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
@@ -1753,45 +1771,26 @@ a.whatsapp-channel-btn {
     .admin-kpi-card-sub {
         font-size: 0.68rem !important;
     }
-}
-
-/* ── Analytics Subnav Horizontal Touch-Scroll on Mobile ── */
-.analytics-subnav-wrapper {
-    width: 100%;
-}
-.analytics-subnav-container {
-    display: inline-flex;
-    background: var(--sn-paper);
-    border: 1px solid var(--sn-paper-line);
-    border-radius: 8px;
-    padding: 3px;
-    gap: 2px;
-}
-@media (max-width: 768px) {
     .analytics-subnav-wrapper {
         width: 100% !important;
         max-width: 100% !important;
         overflow: hidden !important;
     }
-    .analytics-subnav-container {
-        display: flex !important;
+    .analytics-subnav-container,
+    .analytics-subnav-container.sn-touch-scroll {
         flex-wrap: nowrap !important;
         overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        scrollbar-width: none !important;
-        -ms-overflow-style: none !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-        padding: 4px !important;
-        gap: 6px !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
-    .analytics-subnav-container::-webkit-scrollbar {
-        display: none !important;
+    .analytics-subnav-container::-webkit-scrollbar,
+    .analytics-subnav-container.sn-touch-scroll::-webkit-scrollbar {
+        display: none;
     }
     .analytics-subnav-btn {
-        flex-shrink: 0 !important;
         white-space: nowrap !important;
+        flex-shrink: 0 !important;
         padding: 7px 12px !important;
         font-size: 0.78rem !important;
     }
