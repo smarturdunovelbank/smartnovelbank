@@ -351,7 +351,15 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
   const [pendingRequestsCount, setPendingRequestsCount] = useState(null);
 
   const fetchRequestsSummary = useCallback(async (tokenOverride) => {
-    const token = tokenOverride || session?.access_token;
+    let token = tokenOverride || session?.access_token;
+    if (!token) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        token = data?.session?.access_token;
+      } catch (e) {
+        console.warn("Session retrieval fallback failed:", e);
+      }
+    }
     if (!token) return;
     try {
       const res = await fetch("/api/admin/requests?pageSize=1", {

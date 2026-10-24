@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { supabase } from "../../lib/supabaseClient";
 import {
   LuSearch as Search,
   LuRefreshCw as RefreshCw,
@@ -68,6 +69,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all"); // 'all' | 'Pending' | 'Completed' | 'PDF Not Available' | 'custom'
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -127,14 +129,34 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
+  // ── Helper: Safe Token Retrieval (session prop or client fallback) ────────
+  const getAuthToken = useCallback(async () => {
+    let token = session?.access_token;
+    if (!token) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        token = data?.session?.access_token;
+      } catch (e) {
+        console.warn("Session retrieval fallback failed:", e);
+      }
+    }
+    return token;
+  }, [session?.access_token]);
+
   // ── Fetch Requests from Backend ───────────────────────────────────────────
   const fetchRequests = useCallback(
     async (isManualRefresh = false) => {
-      const token = session?.access_token;
-      if (!token) return;
-
+      setLoadError(null);
       if (isManualRefresh) setRefreshing(true);
       else setLoading(true);
+
+      const token = await getAuthToken();
+      if (!token) {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadError("Waiting for active admin session token. Please ensure you are logged in.");
+        return;
+      }
 
       try {
         const params = new URLSearchParams();
@@ -156,7 +178,9 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData?.error || `Request failed with HTTP ${res.status}`);
+          const errMsg = errData?.error || `Request failed with HTTP ${res.status}`;
+          setLoadError(errMsg);
+          throw new Error(errMsg);
         }
 
         const data = await res.json();
@@ -170,13 +194,14 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
         }
       } catch (err) {
         console.error("Failed to load requests:", err);
+        setLoadError(err.message || "Failed to load requests.");
         showToast(err.message || "Failed to load requests.", "error");
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [session?.access_token, page, pageSize, statusFilter, debouncedSearch, showToast, onCountsUpdate]
+    [getAuthToken, page, pageSize, statusFilter, debouncedSearch, showToast, onCountsUpdate]
   );
 
   useEffect(() => {
@@ -241,7 +266,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
     e?.preventDefault();
     if (!editingRequest) return;
 
-    const token = session?.access_token;
+    const token = await getAuthToken();
     if (!token) {
       showToast("Session expired. Please log in again.", "error");
       return;
@@ -319,7 +344,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
 
   // ── Quick 1-Click "Mark Unavailable" ──────────────────────────────────────
   const handleQuickMarkUnavailable = async (req) => {
-    const token = session?.access_token;
+    const token = await getAuthToken();
     if (!token) return;
 
     try {
@@ -355,7 +380,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
 
-    const token = session?.access_token;
+    const token = await getAuthToken();
     if (!token) return;
 
     setDeleting(true);
@@ -994,6 +1019,38 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                     <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
                       <Spinner size={24} color="var(--sn-gold)" />
                       <span>Loading requests...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: "50px 16px", textAlign: "center" }}>
+                    <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                      <AlertCircle size={30} style={{ color: "var(--sn-danger)" }} />
+                      <span style={{ fontWeight: 600, color: "var(--sn-danger)", fontSize: "0.95rem" }}>
+                        Error Loading Requests
+                      </span>
+                      <span style={{ fontSize: "0.84rem", color: "var(--sn-text-sub)", maxWidth: "420px", lineHeight: 1.45 }}>
+                        {loadError}
+                      </span>
+                      <button
+                        onClick={() => fetchRequests(true)}
+                        className="admin-btn-secondary"
+                        style={{
+                          marginTop: "6px",
+                          padding: "6px 14px",
+                          borderRadius: "7px",
+                          border: "1px solid var(--sn-paper-line)",
+                          fontSize: "0.82rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        <RefreshCw size={12} />
+                        <span>Retry</span>
+                      </button>
                     </div>
                   </td>
                 </tr>

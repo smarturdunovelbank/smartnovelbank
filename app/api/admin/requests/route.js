@@ -1,8 +1,33 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { verifySupabaseAdmin, getAdminSupabase } from "../../../../lib/adminAuth";
+import { createClient } from "@supabase/supabase-js";
+import { verifySupabaseAdmin } from "../../../../lib/adminAuth";
+import { supabaseNoCache } from "../../../../lib/supabaseClientNoCache";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Helper to obtain the best Supabase client for database operations.
+ * If SUPABASE_SERVICE_ROLE_KEY is set in environment, creates an unrestricted client.
+ * Otherwise, uses supabaseNoCache (anon key) which has full read/write access to novel_requests
+ * and avoids RLS role mismatches that occur when sending an 'authenticated' JWT token on tables
+ * configured with anon-only RLS policies.
+ */
+function getRequestsDbClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  if (serviceRoleKey && supabaseUrl) {
+    return createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url, opts = {}) => fetch(url, { ...opts, cache: "no-store" }),
+      },
+    });
+  }
+
+  return supabaseNoCache;
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // GET /api/admin/requests
@@ -10,7 +35,7 @@ export const dynamic = "force-dynamic";
 // Protected: Supabase Admin bearer token required.
 // ════════════════════════════════════════════════════════════════════════════
 export async function GET(request) {
-  const { user, token, error: authError } = await verifySupabaseAdmin(request);
+  const { user, error: authError } = await verifySupabaseAdmin(request);
   if (!user) {
     return NextResponse.json(
       { error: "Unauthorized: Please log in with your Supabase Admin account.", details: authError },
@@ -30,10 +55,10 @@ export async function GET(request) {
     const pageSize = Math.min(Math.max(isNaN(pageSizeParam) ? 25 : pageSizeParam, 1), 100);
     const offset = (page - 1) * pageSize;
 
-    const supabaseAdmin = getAdminSupabase(token);
+    const dbClient = getRequestsDbClient();
 
     // 1. Build main paginated data query
-    let query = supabaseAdmin
+    let query = dbClient
       .from("novel_requests")
       .select("id, created_at, novel_name, writer_name, message, device, status, pdf_link", { count: "exact" });
 
@@ -76,10 +101,10 @@ export async function GET(request) {
       unavailableCountRes,
     ] = await Promise.all([
       query,
-      supabaseAdmin.from("novel_requests").select("*", { count: "exact", head: true }),
-      supabaseAdmin.from("novel_requests").select("*", { count: "exact", head: true }).or("status.eq.Pending,status.is.null"),
-      supabaseAdmin.from("novel_requests").select("*", { count: "exact", head: true }).eq("status", "Completed"),
-      supabaseAdmin.from("novel_requests").select("*", { count: "exact", head: true }).eq("status", "PDF Not Available"),
+      dbClient.from("novel_requests").select("*", { count: "exact", head: true }),
+      dbClient.from("novel_requests").select("*", { count: "exact", head: true }).or("status.eq.Pending,status.is.null"),
+      dbClient.from("novel_requests").select("*", { count: "exact", head: true }).eq("status", "Completed"),
+      dbClient.from("novel_requests").select("*", { count: "exact", head: true }).eq("status", "PDF Not Available"),
     ]);
 
     if (mainRes.error) {
@@ -122,7 +147,7 @@ export async function GET(request) {
 // Protected: Supabase Admin bearer token required.
 // ════════════════════════════════════════════════════════════════════════════
 export async function PATCH(request) {
-  const { user, token, error: authError } = await verifySupabaseAdmin(request);
+  const { user, error: authError } = await verifySupabaseAdmin(request);
   if (!user) {
     return NextResponse.json(
       { error: "Unauthorized: Please log in with your Supabase Admin account.", details: authError },
@@ -172,11 +197,11 @@ export async function PATCH(request) {
     }
   }
 
-  const supabaseAdmin = getAdminSupabase(token);
+  const dbClient = getRequestsDbClient();
 
   try {
     // 1. Update the request in public.novel_requests
-    const { data: updatedRequest, error: updateError } = await supabaseAdmin
+    const { data: updatedRequest, error: updateError } = await dbClient
       .from("novel_requests")
       .update({
         novel_name: cleanNovelName,
@@ -210,7 +235,7 @@ export async function PATCH(request) {
       }
 
       // Check if novel already exists in urdu_novels by link or exact title
-      const { data: existingRows, error: searchErr } = await supabaseAdmin
+      const { data: existingRows, error: searchErr } = await dbClient
         .from("urdu_novels")
         .select("id, Titles, Links")
         .or(`Links.eq.${cleanPdfLink},Titles.ilike.${finalCatalogTitle}`)
@@ -228,7 +253,7 @@ export async function PATCH(request) {
         };
       } else {
         // Insert new entry into urdu_novels
-        const { data: newNovel, error: insertNovelErr } = await supabaseAdmin
+        const { data: newNovel, error: insertNovelErr } = await dbClient
           .from("urdu_novels")
           .insert({
             Titles: finalCatalogTitle,
@@ -253,7 +278,7 @@ export async function PATCH(request) {
           // If markAsFeatured is true, also add to featured_novels
           if (markAsFeatured === true) {
             try {
-              const { error: featErr } = await supabaseAdmin
+              const { error: featErr } = await dbClient
                 .from("featured_novels")
                 .insert({
                   novel_id: newNovel.id,
@@ -302,7 +327,7 @@ export async function PATCH(request) {
 // Protected: Supabase Admin bearer token required.
 // ════════════════════════════════════════════════════════════════════════════
 export async function DELETE(request) {
-  const { user, token, error: authError } = await verifySupabaseAdmin(request);
+  const { user, error: authError } = await verifySupabaseAdmin(request);
   if (!user) {
     return NextResponse.json(
       { error: "Unauthorized: Please log in with your Supabase Admin account.", details: authError },
@@ -333,10 +358,10 @@ export async function DELETE(request) {
     );
   }
 
-  const supabaseAdmin = getAdminSupabase(token);
+  const dbClient = getRequestsDbClient();
 
   try {
-    const { error: delError } = await supabaseAdmin
+    const { error: delError } = await dbClient
       .from("novel_requests")
       .delete()
       .eq("id", idToDelete);
