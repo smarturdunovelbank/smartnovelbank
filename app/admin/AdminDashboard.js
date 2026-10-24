@@ -46,6 +46,7 @@ import {
 } from "react-icons/lu";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import NovelRequestsManager from "./NovelRequestsManager";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 // ── SVG Spinner ──────────────────────────────────────────────────────────────
 function Spinner({ size = 18, color = "currentColor" }) {
@@ -162,6 +163,7 @@ export default function AdminDashboard({ defaultTab = "catalog" }) {
   const [togglingFeaturedId, setTogglingFeaturedId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteMsg, setDeleteMsg] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null, type: "novel" });
 
   // ── Novel Inline Editing State ───────────────────────────────────────────
   const [editingNovelId, setEditingNovelId] = useState(null);
@@ -1121,15 +1123,20 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
     }
   };
 
-  // Delete Novel
-  const handleDeleteNovel = async (id, title) => {
+  // Delete Novel (Open Custom Confirmation Modal)
+  const handleDeleteNovel = (id, title) => {
+    setDeleteModal({
+      isOpen: true,
+      item: { id, title },
+      type: "novel",
+    });
+  };
+
+  const handleConfirmDeleteNovel = async () => {
+    if (!deleteModal.item) return;
+    const { id, title } = deleteModal.item;
     const token = session?.access_token;
     if (!token) return;
-
-    const confirmed = window.confirm(
-      `Are you sure you want to delete this novel from the catalog?\n\nID: #${id}\nTitle: "${title}"\n\nThis action cannot be undone.`
-    );
-    if (!confirmed) return;
 
     setDeletingId(id);
     setDeleteMsg(null);
@@ -1151,6 +1158,7 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
       setCatalogTotal((prev) => (prev ? prev - 1 : 0));
       setDeleteMsg({ type: "success", msg: `Novel #${id} ("${title}") deleted successfully.` });
       setTimeout(() => setDeleteMsg(null), 4000);
+      setDeleteModal({ isOpen: false, item: null, type: "novel" });
     } catch (err) {
       setDeleteMsg({ type: "error", msg: err.message || "Failed to delete novel." });
     } finally {
@@ -5619,6 +5627,15 @@ Mushaf by Nemrah Ahmed | https://archive.org/details/mushaf...`}
           color: var(--sn-gold) !important;
         }
       `}</style>
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, item: null, type: "novel" })}
+        onConfirm={handleConfirmDeleteNovel}
+        isDeleting={Boolean(deletingId)}
+        item={deleteModal.item}
+        type={deleteModal.type || "novel"}
+      />
     </>
   );
 }

@@ -30,6 +30,7 @@ import {
   LuChevronDown as ChevronDown,
   LuChevronUp as ChevronUp,
 } from "react-icons/lu";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 // ── Reusable Spinner ────────────────────────────────────────────────────────
 function Spinner({ size = 16, color = "currentColor" }) {
@@ -105,7 +106,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
   const [viewingMessage, setViewingMessage] = useState(null);
 
   // ── Delete Confirmation State ────────────────────────────────────────────
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null, type: "request" });
   const [deleting, setDeleting] = useState(false);
 
   // ── Toast Notification State ─────────────────────────────────────────────
@@ -376,16 +377,25 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
     }
   };
 
-  // ── Delete Request ────────────────────────────────────────────────────────
+  // ── Delete Request Handlers ──────────────────────────────────────────────
+  const handleDeleteRequest = (req) => {
+    setDeleteModal({
+      isOpen: true,
+      item: req,
+      type: "request",
+    });
+  };
+
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
+    const target = deleteModal.item;
+    if (!target) return;
 
     const token = await getAuthToken();
     if (!token) return;
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/admin/requests?id=${deleteTarget.id}`, {
+      const res = await fetch(`/api/admin/requests?id=${target.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -397,8 +407,8 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
         throw new Error(err.error || "Failed to delete request");
       }
 
-      showToast(`Request #${deleteTarget.id} permanently deleted.`, "success");
-      setDeleteTarget(null);
+      showToast(`Request #${target.id} permanently deleted.`, "success");
+      setDeleteModal({ isOpen: false, item: null, type: "request" });
       fetchRequests();
     } catch (err) {
       showToast(err.message || "Failed to delete request.", "error");
@@ -1309,7 +1319,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
 
                           {/* Delete Button */}
                           <button
-                            onClick={() => setDeleteTarget(req)}
+                            onClick={() => handleDeleteRequest(req)}
                             title="Delete Request"
                             aria-label={`Delete Request #${req.id}`}
                             style={{
@@ -1632,7 +1642,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                     )}
 
                     <button
-                      onClick={() => setDeleteTarget(req)}
+                      onClick={() => handleDeleteRequest(req)}
                       title="Delete Request"
                       aria-label={`Delete Request #${req.id}`}
                       style={{
@@ -2283,97 +2293,14 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
       {/* ═════════════════════════════════════════════════════════════════════
           DELETE CONFIRMATION MODAL
       ══════════════════════════════════════════════════════════════════════ */}
-      {deleteTarget && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            background: "rgba(0,0,0,0.5)",
-            backdropFilter: "blur(3px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-          }}
-        >
-          <div
-            style={{
-              background: "var(--sn-paper)",
-              border: "1px solid var(--sn-paper-line)",
-              borderRadius: "14px",
-              width: "100%",
-              maxWidth: "420px",
-              boxShadow: "0 16px 32px rgba(0,0,0,0.2)",
-              padding: "24px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--sn-danger)" }}>
-              <AlertTriangle size={22} strokeWidth={2} />
-              <h4 style={{ margin: 0, fontSize: "1.05rem", color: "var(--sn-ink)", fontWeight: 700 }}>
-                Delete Request #{deleteTarget.id}?
-              </h4>
-            </div>
-
-            <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--sn-text-sub)", lineHeight: 1.5 }}>
-              Are you sure you want to permanently delete this request for{" "}
-              <strong style={{ color: "var(--sn-ink)" }}>"{deleteTarget.novel_name}"</strong>? This action cannot be undone.
-            </p>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px" }}>
-              <button
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
-                style={{
-                  padding: "7px 14px",
-                  borderRadius: "7px",
-                  border: "1px solid var(--sn-paper-line)",
-                  background: "var(--sn-paper-card)",
-                  color: "var(--sn-ink)",
-                  fontSize: "0.84rem",
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={deleting}
-                style={{
-                  padding: "7px 16px",
-                  borderRadius: "7px",
-                  border: "none",
-                  background: "var(--sn-danger)",
-                  color: "#fff",
-                  fontSize: "0.84rem",
-                  fontWeight: 600,
-                  cursor: deleting ? "not-allowed" : "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                {deleting ? (
-                  <>
-                    <Spinner size={13} color="#fff" />
-                    <span>Deleting...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={13} />
-                    <span>Delete Permanently</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, item: null, type: "request" })}
+        onConfirm={confirmDelete}
+        isDeleting={deleting}
+        item={deleteModal.item}
+        type="request"
+      />
     </div>
   );
 }
