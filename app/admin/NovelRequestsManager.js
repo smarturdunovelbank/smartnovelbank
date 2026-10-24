@@ -428,6 +428,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
     if (status === "Completed") {
       return (
         <span
+          className="badge-completed"
           style={{
             background: "rgba(47,125,90,0.12)",
             color: "var(--sn-success)",
@@ -439,10 +440,16 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
             display: "inline-flex",
             alignItems: "center",
             gap: "5px",
-            whiteSpace: "nowrap",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            overflowWrap: "break-word",
+            height: "auto",
+            maxWidth: "100%",
+            lineHeight: 1.4,
+            textAlign: "left",
           }}
         >
-          <CheckCircle size={12} strokeWidth={2} />
+          <CheckCircle size={12} strokeWidth={2} style={{ flexShrink: 0 }} />
           <span>Completed</span>
         </span>
       );
@@ -450,6 +457,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
     if (status === "Pending") {
       return (
         <span
+          className="badge-pending"
           style={{
             background: "rgba(201,149,44,0.14)",
             color: "var(--sn-ink)",
@@ -461,10 +469,16 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
             display: "inline-flex",
             alignItems: "center",
             gap: "5px",
-            whiteSpace: "nowrap",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            overflowWrap: "break-word",
+            height: "auto",
+            maxWidth: "100%",
+            lineHeight: 1.4,
+            textAlign: "left",
           }}
         >
-          <Clock size={12} strokeWidth={2} style={{ color: "var(--sn-gold)" }} />
+          <Clock size={12} strokeWidth={2} style={{ color: "var(--sn-gold)", flexShrink: 0 }} />
           <span>Pending</span>
         </span>
       );
@@ -472,6 +486,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
     if (status === "PDF Not Available") {
       return (
         <span
+          className="badge-failed"
           style={{
             background: "var(--sn-alert-red-bg)",
             color: "var(--sn-danger)",
@@ -483,10 +498,16 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
             display: "inline-flex",
             alignItems: "center",
             gap: "5px",
-            whiteSpace: "nowrap",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            overflowWrap: "break-word",
+            height: "auto",
+            maxWidth: "100%",
+            lineHeight: 1.4,
+            textAlign: "left",
           }}
         >
-          <XCircle size={12} strokeWidth={2} />
+          <XCircle size={12} strokeWidth={2} style={{ flexShrink: 0 }} />
           <span>PDF Not Available</span>
         </span>
       );
@@ -494,6 +515,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
     // Custom admin response note
     return (
       <span
+        className="badge-custom"
         style={{
           background: "var(--sn-paper-card)",
           color: "var(--sn-text-main)",
@@ -505,13 +527,18 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
           display: "inline-flex",
           alignItems: "center",
           gap: "5px",
-          maxWidth: "240px",
+          maxWidth: "100%",
           wordBreak: "break-word",
+          overflowWrap: "break-word",
+          whiteSpace: "normal",
+          height: "auto",
+          lineHeight: 1.4,
+          textAlign: "left",
         }}
         title={status}
       >
         <FileText size={11} style={{ opacity: 0.7, flexShrink: 0 }} />
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span style={{ wordBreak: "break-word", overflowWrap: "break-word", whiteSpace: "normal" }}>
           {status}
         </span>
       </span>
@@ -1389,8 +1416,18 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                   }}
                 >
                   {/* Top Row: #<id> badge + Status badge on right */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "8px",
+                      width: "100%",
+                      minWidth: 0,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                       <span
                         style={{
                           fontFamily: "'Courier New', Courier, monospace",
@@ -1424,7 +1461,7 @@ export default function NovelRequestsManager({ session, onCountsUpdate }) {
                         </span>
                       )}
                     </div>
-                    <div style={{ flexShrink: 0 }}>
+                    <div style={{ maxWidth: "100%", minWidth: 0 }}>
                       {renderStatusBadge(req.status)}
                     </div>
                   </div>

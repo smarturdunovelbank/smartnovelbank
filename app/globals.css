@@ -1125,6 +1125,19 @@ a.whatsapp-channel-btn {
     background: var(--sn-paper-card);
 }
 
+.badge-completed,
+.badge-pending,
+.badge-failed,
+.badge-custom {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    height: auto !important;
+    max-width: 100% !important;
+    line-height: 1.4 !important;
+    text-align: left;
+}
+
 .badge-completed {
     background: var(--sn-success); 
     color: white; 
@@ -1132,7 +1145,6 @@ a.whatsapp-channel-btn {
     border-radius: 20px; 
     font-size: 0.85rem;
     font-weight: bold;
-    white-space: nowrap;
 }
 .badge-pending {
     background: var(--sn-gold-soft); 
@@ -1141,7 +1153,6 @@ a.whatsapp-channel-btn {
     border-radius: 20px; 
     font-size: 0.85rem;
     font-weight: bold;
-    white-space: nowrap;
 }
 .badge-failed {
     background: var(--sn-alert-red-bg); 
@@ -1150,7 +1161,6 @@ a.whatsapp-channel-btn {
     border-radius: 20px; 
     font-size: 0.85rem;
     font-weight: bold;
-    white-space: nowrap;
 }
 .badge-custom {
     background: var(--sn-paper-card); 
@@ -1160,8 +1170,6 @@ a.whatsapp-channel-btn {
     font-size: 0.8rem;
     font-weight: normal;
     border: 1px solid var(--sn-gold-soft);
-    white-space: normal;
-    word-break: break-word;
     display: inline-block;
 }
 
