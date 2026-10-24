@@ -1741,14 +1741,24 @@ a.whatsapp-channel-btn {
         gap: 10px !important;
     }
     .admin-kpi-card {
-        padding: 12px 14px !important;
+        padding: 12px 12px !important;
+        gap: 6px !important;
     }
     .admin-kpi-card-value {
         font-size: 1.35rem !important;
     }
+    .admin-kpi-card-label {
+        font-size: 0.74rem !important;
+    }
+    .admin-kpi-card-sub {
+        font-size: 0.68rem !important;
+    }
 }
 
-/* ── Analytics Subnav Responsive Grid ── */
+/* ── Analytics Subnav Horizontal Touch-Scroll on Mobile ── */
+.analytics-subnav-wrapper {
+    width: 100%;
+}
 .analytics-subnav-container {
     display: inline-flex;
     background: var(--sn-paper);
@@ -1757,16 +1767,33 @@ a.whatsapp-channel-btn {
     padding: 3px;
     gap: 2px;
 }
-@media (max-width: 640px) {
-    .analytics-subnav-container {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
+@media (max-width: 768px) {
+    .analytics-subnav-wrapper {
         width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+    }
+    .analytics-subnav-container {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 4px !important;
+        gap: 6px !important;
+    }
+    .analytics-subnav-container::-webkit-scrollbar {
+        display: none !important;
     }
     .analytics-subnav-btn {
-        justify-content: center !important;
-        text-align: center !important;
-        padding: 8px 10px !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        padding: 7px 12px !important;
+        font-size: 0.78rem !important;
     }
 }
 
@@ -1817,10 +1844,10 @@ a.whatsapp-channel-btn {
 }
 @media (max-width: 768px) {
     .admin-analytics-toolbar {
-        flex-direction: column;
+        flex-direction: column !important;
         align-items: stretch !important;
-        gap: 10px;
-        padding: 12px;
+        gap: 10px !important;
+        padding: 12px !important;
     }
     .admin-analytics-toolbar-filters {
         display: flex !important;
@@ -1855,15 +1882,26 @@ a.whatsapp-channel-btn {
     .admin-analytics-row-3 {
         display: flex !important;
         align-items: center !important;
-        gap: 8px !important;
+        gap: 6px !important;
         width: 100% !important;
     }
     .admin-analytics-row-3 select {
-        flex: 1 !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        width: auto !important;
+    }
+    .admin-analytics-row-3 button {
+        flex-shrink: 0 !important;
+        padding: 6px 10px !important;
     }
     .admin-date-icon,
     .admin-date-sep {
         display: none !important;
+    }
+    .admin-analytics-cached {
+        width: 100% !important;
+        justify-content: flex-end !important;
+        font-size: 0.72rem !important;
     }
 }
 

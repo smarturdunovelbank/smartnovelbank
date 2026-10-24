@@ -261,7 +261,7 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
         >
           <Icon size={16} strokeWidth={1.75} />
         </div>
-        <span style={{ fontSize: "0.8rem", color: "var(--sn-text-sub)", fontWeight: 500 }}>{label}</span>
+        <span className="admin-kpi-card-label" style={{ fontSize: "0.8rem", color: "var(--sn-text-sub)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
       </div>
 
       <div
@@ -280,6 +280,7 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
 
       {subValue && (
         <div
+          className="admin-kpi-card-sub"
           style={{
             fontSize: "0.75rem",
             color: "var(--sn-text-sub)",
@@ -919,7 +920,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
 
         {/* Right Side: Subtle Cached timestamp */}
         {analyticsData?.cached && analyticsData.cachedAt && (
-          <div style={{ display: "flex", alignItems: "center" }}>
+          <div className="admin-analytics-cached" style={{ display: "flex", alignItems: "center" }}>
             <span style={{ fontSize: "0.74rem", color: "var(--sn-text-sub)", whiteSpace: "nowrap" }}>
               Cached {new Date(analyticsData.cachedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
@@ -928,9 +929,9 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
       </div>
 
       {/* ── 2. SUB-NAVIGATION SEGMENTS ────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+      <div className="analytics-subnav-wrapper" style={{ width: "100%", overflowX: "hidden" }}>
         <div
-          className="analytics-subnav-container"
+          className="analytics-subnav-container sn-touch-scroll"
           style={{
             display: "inline-flex",
             background: "var(--sn-paper)",
@@ -938,6 +939,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
             borderRadius: "8px",
             padding: "3px",
             gap: "2px",
+            overflowX: "auto",
+            whiteSpace: "nowrap",
           }}
         >
           {[
@@ -969,6 +972,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                   boxShadow: isActive ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
                   transition: "all 0.12s ease",
                   whiteSpace: "nowrap",
+                  flexShrink: 0,
                 }}
               >
                 <Icon size={14} strokeWidth={1.75} style={{ color: isActive ? "var(--sn-gold)" : "currentColor", flexShrink: 0 }} />
