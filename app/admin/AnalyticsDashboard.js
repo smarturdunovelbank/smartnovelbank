@@ -242,13 +242,17 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
         display: "flex",
         flexDirection: "column",
         gap: "8px",
+        minWidth: 0,
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, width: "100%" }}>
         <div
           style={{
-            width: 32,
-            height: 32,
+            width: 28,
+            height: 28,
+            minWidth: 28,
             borderRadius: "8px",
             background: "var(--sn-paper)",
             border: "1px solid var(--sn-paper-line)",
@@ -256,11 +260,23 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
             alignItems: "center",
             justifyContent: "center",
             color: iconColor || "var(--sn-gold)",
+            flexShrink: 0,
           }}
         >
-          <Icon size={16} strokeWidth={1.75} />
+          <Icon size={15} strokeWidth={1.75} />
         </div>
-        <span className="admin-kpi-card-label" style={{ fontSize: "0.8rem", color: "var(--sn-text-sub)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+        <span
+          className="admin-kpi-card-label"
+          style={{
+            fontSize: "0.8rem",
+            color: "var(--sn-text-sub)",
+            fontWeight: 500,
+            minWidth: 0,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {label}
+        </span>
       </div>
 
       <div
@@ -271,6 +287,7 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
           fontVariantNumeric: "tabular-nums",
           letterSpacing: "-0.02em",
           lineHeight: 1.15,
+          minWidth: 0,
         }}
       >
         {value}
@@ -283,9 +300,8 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
             fontSize: "0.75rem",
             color: "var(--sn-text-sub)",
             lineHeight: 1.35,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
+            minWidth: 0,
+            overflowWrap: "break-word",
           }}
           title={typeof subValue === "string" ? subValue : undefined}
         >
@@ -297,15 +313,19 @@ function KpiCard({ icon: Icon, iconColor, label, value, subValue }) {
 }
 
 // ── Section Container (Subtle 1px border, no heavy top strip) ────────────────
-function SectionCard({ title, icon: Icon, action, children, style: extraStyle }) {
+function SectionCard({ title, icon: Icon, action, children, style: extraStyle, className: extraClass }) {
   return (
     <section
+      className={`admin-section-card ${extraClass || ""}`.trim()}
       style={{
         background: "var(--sn-paper-card)",
         border: "1px solid var(--sn-paper-line)",
         borderRadius: "12px",
-        padding: "20px 22px",
         boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03)",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
         ...extraStyle,
       }}
     >
@@ -318,13 +338,16 @@ function SectionCard({ title, icon: Icon, action, children, style: extraStyle })
             marginBottom: "16px",
             flexWrap: "wrap",
             gap: "8px",
+            width: "100%",
+            minWidth: 0,
+            boxSizing: "border-box",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {Icon && <Icon size={16} strokeWidth={1.75} style={{ color: "var(--sn-gold)" }} />}
-            <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600, color: "var(--sn-ink)" }}>{title}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: "1 1 auto" }}>
+            {Icon && <Icon size={16} strokeWidth={1.75} style={{ color: "var(--sn-gold)", flexShrink: 0 }} />}
+            <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600, color: "var(--sn-ink)", overflowWrap: "break-word" }}>{title}</h3>
           </div>
-          {action}
+          {action && <div style={{ flexShrink: 0 }}>{action}</div>}
         </div>
       )}
       {children}
@@ -743,7 +766,18 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
   // RENDER: Main Executive SaaS Layout
   // ══════════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+    <div
+      className="analytics-dashboard-root"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "18px",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+      }}
+    >
       {/* ── Recharts Focus Outline Reset ────────────────────────────────────── */}
       <style>{`
         .recharts-wrapper,
@@ -1157,7 +1191,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       tick={{ fontSize: 10, fill: "var(--sn-text-sub)" }}
                       stroke="var(--sn-paper-line)"
                     />
-                    <Tooltip content={<CustomTooltip labelFormatter={formatTooltipDate} />} />
+                    <Tooltip content={<CustomTooltip labelFormatter={formatTooltipDate} />} cursor={false} />
                     <Legend
                       verticalAlign="top"
                       height={32}
@@ -1204,7 +1238,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
           </SectionCard>
 
           {/* 2-Column Actionable Tables (Demand Gap & Top Successful) */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: "16px", width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box" }}>
             {/* Table 1: Missing Novels (Demand Gap) */}
             <SectionCard
               title="Missing Novels (Demand Gap)"
@@ -1221,7 +1255,8 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       fontSize: "0.75rem",
                       fontWeight: 600,
                       cursor: "pointer",
-                      padding: 0,
+                      padding: "4px 0",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {missingLimit === 8 ? `View All (${topMissingQueries.length})` : "Show Less"}
@@ -1314,7 +1349,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                   </div>
 
                   {/* Mobile Stacked Action Cards */}
-                  <div className="admin-mobile-cards" style={{ display: "none", flexDirection: "column", gap: "8px" }}>
+                  <div className="admin-mobile-cards" style={{ display: "none", flexDirection: "column", gap: "8px", width: "100%", minWidth: 0, boxSizing: "border-box" }}>
                     {topMissingQueries.slice(0, missingLimit).map((item, idx) => (
                       <div
                         key={idx}
@@ -1322,31 +1357,34 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                           background: "var(--sn-paper)",
                           border: "1px solid var(--sn-paper-line)",
                           borderRadius: "10px",
-                          padding: "10px 12px",
+                          padding: "10px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          gap: "10px",
+                          gap: "8px",
+                          width: "100%",
+                          minWidth: 0,
+                          boxSizing: "border-box",
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0, flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
                           <span
                             style={{
                               fontFamily: "monospace",
                               fontSize: "0.76rem",
                               color: "var(--sn-text-sub)",
                               fontWeight: 600,
-                              width: "24px",
+                              width: "22px",
                               flexShrink: 0,
                             }}
                           >
                             #{idx + 1}
                           </span>
                           <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ color: "var(--sn-ink)", fontWeight: 600, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <div style={{ color: "var(--sn-ink)", fontWeight: 600, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {item.query}
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "var(--sn-text-sub)", display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                            <div style={{ fontSize: "0.7rem", color: "var(--sn-text-sub)", display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
                               <span style={{ color: PALETTE.maroon, fontWeight: 600 }}>{item.count} search{item.count > 1 ? "es" : ""}</span>
                               {item.uniqueUsers && (
                                 <>
@@ -1362,12 +1400,12 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                           type="button"
                           onClick={() => handleAddToCatalog(item.query)}
                           style={{
-                            padding: "6px 11px",
+                            padding: "6px 10px",
                             borderRadius: "6px",
                             border: "1px solid var(--sn-gold)",
                             background: "rgba(197, 155, 39, 0.08)",
                             color: "var(--sn-gold)",
-                            fontSize: "0.74rem",
+                            fontSize: "0.75rem",
                             fontWeight: 600,
                             cursor: "pointer",
                             display: "inline-flex",
@@ -1375,7 +1413,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                             gap: "4px",
                             flexShrink: 0,
                             whiteSpace: "nowrap",
-                            minHeight: "34px",
+                            minHeight: "32px",
                           }}
                           title={`Pre-fill "${item.query}" in Single Entry`}
                         >
@@ -1470,7 +1508,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                   </div>
 
                   {/* Mobile Stacked Action Cards */}
-                  <div className="admin-mobile-cards" style={{ display: "none", flexDirection: "column", gap: "8px" }}>
+                  <div className="admin-mobile-cards" style={{ display: "none", flexDirection: "column", gap: "8px", width: "100%", minWidth: 0, boxSizing: "border-box" }}>
                     {topSuccessfulQueries.slice(0, successfulLimit).map((item, idx) => (
                       <div
                         key={idx}
@@ -1478,11 +1516,14 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                           background: "var(--sn-paper)",
                           border: "1px solid var(--sn-paper-line)",
                           borderRadius: "10px",
-                          padding: "10px 12px",
+                          padding: "10px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          gap: "10px",
+                          gap: "8px",
+                          width: "100%",
+                          minWidth: 0,
+                          boxSizing: "border-box",
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0, flex: 1 }}>
@@ -1569,7 +1610,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       tick={{ fontSize: 10, fill: "var(--sn-text-sub)" }}
                       stroke="var(--sn-paper-line)"
                     />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip />} cursor={false} />
                     <Bar dataKey="searches" name="Searches" radius={[4, 4, 0, 0]}>
                       {hourlyData.map((entry, idx) => {
                         const max = Math.max(...hourlyData.map((h) => h.searches));
@@ -1662,7 +1703,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Funnel Chart & KPI Summary */}
           <SectionCard title="Surprise Me Feature Funnel" icon={Dice}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", alignItems: "center" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "20px", alignItems: "center", width: "100%", minWidth: 0, boxSizing: "border-box" }}>
               <div style={{ height: 220 }}>
                 <ResponsiveContainer>
                   <BarChart data={funnelData} margin={{ top: 16, right: 8, left: -15, bottom: 0 }}>
@@ -1677,7 +1718,7 @@ export default function AnalyticsDashboard({ session, onSwitchToSingleEntry }) {
                       tick={{ fontSize: 10, fill: "var(--sn-text-sub)" }}
                       stroke="var(--sn-paper-line)"
                     />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip />} cursor={false} />
                     <Bar dataKey="value" name="Interactions" radius={[4, 4, 0, 0]}>
                       {funnelData.map((entry, idx) => (
                         <Cell key={idx} fill={entry.fill} />

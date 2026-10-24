@@ -1691,7 +1691,7 @@ Haalim by Nemrah Ahmed,https://drive.google.com/file/d/sample-link-4/view,no`;
   // ── Render: Authenticated Control Center ──────────────────────────────────
   return (
     <>
-      <main style={{ maxWidth: "1120px", margin: "0 auto", padding: "24px 16px 48px", width: "100%" }}>
+      <main style={{ maxWidth: "1120px", margin: "0 auto", padding: "24px 16px 48px", width: "100%", minWidth: 0, boxSizing: "border-box" }}>
         {/* Top Header Bar */}
         <div className="admin-header-row">
           <div className="admin-header-row-1" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
